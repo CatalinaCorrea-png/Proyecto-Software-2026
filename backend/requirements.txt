@@ -1,0 +1,11 @@
+# backend/requirements.txt
+fastapi
+uvicorn[standard]
+websockets
+opencv-python
+ultralytics
+numpy
+paho-mqtt
+sqlalchemy
+python-dotenv
+Pillow
