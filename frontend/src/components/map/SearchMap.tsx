@@ -77,7 +77,10 @@ export function SearchMap({ telemetry, detections, trail }: SearchMapProps) {
         {trail.length > 1 && (
           <Polyline
             positions={trail.map(p => [p.lat, p.lng])}
-            color="#00BCD4" weight={2} opacity={0.6}
+            color="#00BCD4" 
+            weight={2} 
+            opacity={0.6}
+            smoothFactor={3}   // ← simplifica puntos cercanos
           />
         )}
 

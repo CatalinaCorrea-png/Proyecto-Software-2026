@@ -17,19 +17,27 @@ class ThermalDetector:
         Recibe matriz de temperaturas 32x24 del MLX90640
         Retorna lista de blobs que podrían ser humanos
         """
-        # Máscara: píxeles dentro del rango de temperatura humana
+        # 1. Máscara binaria — qué píxeles están dentro del rango de temperatura humana
         mask = ((temp_matrix >= HUMAN_TEMP_MIN) &
                 (temp_matrix <= HUMAN_TEMP_MAX)).astype(np.uint8)
 
-        # Encontrar regiones conectadas (blobs)
+        # Resultado: matriz de 0s y 1s
+        # 1 = temperatura en rango humano
+        # 0 = demasiado frío o demasiado caliente
+        
+        # 2. Encontrar regiones conectadas (blobs)
         import cv2
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask)
+        # connectedComponents agrupa píxeles adyacentes con el mismo valor
+        # Cada grupo = un blob = posible fuente de calor
 
+        # 3. Filtrar por tamaño
         detections = []
         for i in range(1, num_labels):  # 0 = fondo, empezamos en 1
             area = stats[i, cv2.CC_STAT_AREA]
-            if area < MIN_BLOB_SIZE:
-                continue  # demasiado chico, probablemente ruido
+            if area < MIN_BLOB_SIZE: # demasiado chico, probablemente ruido
+                continue  
+            # blob válido → posible persona
 
             # Normalizar posición a 0.0-1.0 (relativo al frame térmico)
             cx_norm = centroids[i][0] / self.grid_w

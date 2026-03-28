@@ -10,38 +10,46 @@ import type { Detection } from '../types'
 export function Dashboard() {
   const { lastMessage, isConnected } = useWebSocket('ws://localhost:8000/ws/mission')
   const { telemetry, trail } = useMission(lastMessage)
-
-  // ── NUEVO: detecciones reales del pipeline de IA ──────────────────────────
   const [mapDetections, setMapDetections] = useState<Detection[]>([])
 
   const handleNewDetection = useCallback((detection: Detection) => {
-    setMapDetections(prev => [detection, ...prev].slice(0, 100))
+    if (detection.confidence === 'low') return
+    setMapDetections(prev => [detection, ...prev].slice(0, 10))
   }, [])
-  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '1fr 300px',
+      gridTemplateColumns: '1fr .5fr .5fr',
       gridTemplateRows: '100vh',
+      width: '100vw',
+      height: '100vh',
       background: '#0A0E1A',
-      gap: 12,
-      padding: 12,
-      boxSizing: 'border-box'
+      gap: 10,
+      padding: 10,
     }}>
-      {/* Mapa — ahora recibe detecciones reales */}
+
+      {/* ── Mapa — ocupa todo el alto ── */}
       <SearchMap
         telemetry={telemetry}
-        detections={mapDetections}    // ← detecciones del pipeline
+        detections={mapDetections}
         trail={trail}
       />
 
+      {/* ── Panel telemetria y camara ── */}
       <div style={{
-        display: 'flex', flexDirection: 'column', gap: 12,
-        overflowY: 'auto'
+        display: 'grid',
+        gridTemplateRows: 'auto auto auto',
+        gap: 10,
+        alignContent: 'center',
+        overflowY: 'auto',
+        minHeight: 0,
+        // height: '100vh'
       }}>
+
+        {/* Header */}
         <div style={{ color: 'white', fontFamily: 'monospace' }}>
-          <div style={{ fontSize: 20, fontWeight: 'bold', color: '#FF6D00' }}>
+          <div style={{ fontSize: 22, fontWeight: 'bold', color: '#FF6D00' }}>
             AeroSearch AI
           </div>
           <div style={{ fontSize: 11, color: '#78909C' }}>
@@ -49,17 +57,35 @@ export function Dashboard() {
           </div>
         </div>
 
+        {/* Telemetría */}
         <TelemetryPanel
           telemetry={telemetry}
           isConnected={isConnected}
           detectionCount={mapDetections.length}
         />
 
-        {/* CameraFeed avisa cuando detecta algo */}
+        {/* Cámara — sin panel de detecciones propio */}
         <CameraFeed onNewDetection={handleNewDetection} />
 
-        <DetectionAlert detections={mapDetections} />
       </div>
+
+      {/* ── Panel alertas ── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateRows: 'auto',
+        gap: 10,
+        alignContent: 'center',
+        overflowY: 'auto',
+        minHeight: 0,
+        // height: '100vh'
+      }}>
+
+        {/* ──  Alertas — detecciones del mapa ── */}
+        <DetectionAlert detections={mapDetections} />
+
+      </div>
+
+
     </div>
   )
 }

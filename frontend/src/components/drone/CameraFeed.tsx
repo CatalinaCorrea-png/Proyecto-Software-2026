@@ -2,9 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useDetectionFeed } from '../../hooks/useDetectionFeed'
 import type { Detection } from '../../types'
 
-// Actualizar el tipo en useDetectionFeed.ts también:
-// thermal_overlay: string  ← agregar este campo a FramePayload
-
 interface Props {
   onNewDetection?: (detection: Detection) => void
 }
@@ -25,19 +22,8 @@ export function CameraFeed({ onNewDetection }: Props) {
     }
   }, [detections, onNewDetection])
 
-  const confidenceColor = (c: string) =>
-    c === 'high' ? '#00C853' : c === 'medium' ? '#FFD600' : '#FF5252'
-
-  const currentFrame = viewMode === 'rgb'
-    ? framePayload?.frame
-    : viewMode === 'overlay'
-    ? framePayload?.thermal_overlay
-    : framePayload?.thermal_frame
-
   const viewLabels: Record<ViewMode, string> = {
-    rgb: 'RGB',
-    overlay: 'OVERLAY',
-    thermal: 'TÉRMICA'
+    rgb: 'RGB', overlay: 'OVERLAY', thermal: 'TÉRMICA'
   }
 
   return (
@@ -48,8 +34,10 @@ export function CameraFeed({ onNewDetection }: Props) {
       padding: '12px',
       display: 'flex',
       flexDirection: 'column',
-      gap: 8
+      gap: 8,
+      minHeight: 0
     }}>
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ color: '#78909C', fontSize: 11, fontFamily: 'monospace' }}>
@@ -62,7 +50,7 @@ export function CameraFeed({ onNewDetection }: Props) {
               fontSize: 10, padding: '2px 6px', borderRadius: 4,
               fontFamily: 'monospace', fontWeight: 'bold'
             }}>
-              {framePayload.detection_count} DETECCIÓN{framePayload.detection_count > 1 ? 'ES' : ''}
+              {framePayload.detection_count} DET
             </span>
           )}
           <div style={{
@@ -72,21 +60,16 @@ export function CameraFeed({ onNewDetection }: Props) {
         </div>
       </div>
 
-      {/* Toggle de vista */}
+      {/* Toggle */}
       <div style={{ display: 'flex', gap: 4 }}>
         {(['rgb', 'overlay', 'thermal'] as ViewMode[]).map(mode => (
           <button
             key={mode}
             onClick={() => setViewMode(mode)}
             style={{
-              flex: 1,
-              padding: '4px 0',
-              fontSize: 10,
-              fontFamily: 'monospace',
-              fontWeight: 'bold',
-              border: 'none',
-              borderRadius: 4,
-              cursor: 'pointer',
+              flex: 1, padding: '4px 0',
+              fontSize: 10, fontFamily: 'monospace', fontWeight: 'bold',
+              border: 'none', borderRadius: 4, cursor: 'pointer',
               background: viewMode === mode ? '#00BCD4' : '#1E3A5F',
               color: viewMode === mode ? '#0A0E1A' : '#78909C',
               transition: 'all 0.15s'
@@ -97,20 +80,25 @@ export function CameraFeed({ onNewDetection }: Props) {
         ))}
       </div>
 
-      {/* Frame */}
-      <div style={{ position: 'relative', borderRadius: 4, overflow: 'hidden' }}>
-        {currentFrame ? (
+      {/* Frame — ocupa el espacio disponible */}
+      <div style={{ flex: 1, borderRadius: 4, overflow: 'hidden', minHeight: 0 }}>
+        {framePayload?.frame ? (
           <img
-            src={`data:image/jpeg;base64,${currentFrame}`}
+            src={`data:image/jpeg;base64,${
+              viewMode === 'rgb' ? framePayload.frame
+              : viewMode === 'overlay' ? (framePayload.thermal_overlay ?? framePayload.frame)
+              : framePayload.thermal_frame
+            }`}
             style={{
-              width: '100%', display: 'block',
+              width: '100%', height: 'auto',
+              objectFit: 'cover', display: 'block',
               imageRendering: viewMode === 'thermal' ? 'pixelated' : 'auto'
             }}
             alt="camera feed"
           />
         ) : (
           <div style={{
-            background: '#060D14', height: 140,
+            background: '#060D14', height: 120, minHeight: 120,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: '#1E3A5F', fontSize: 12, fontFamily: 'monospace'
           }}>
@@ -119,43 +107,6 @@ export function CameraFeed({ onNewDetection }: Props) {
         )}
       </div>
 
-      {/* Detecciones del frame */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {framePayload?.fused_detections.map((det, i) => (
-          <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            fontFamily: 'monospace', fontSize: 11
-          }}>
-            <div style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: confidenceColor(det.confidence), flexShrink: 0
-            }} />
-            <span style={{ color: confidenceColor(det.confidence) }}>
-              {det.confidence}
-            </span>
-            <span style={{ color: '#78909C' }}>
-              {det.source}
-              {'temperature' in det && det.temperature
-                ? ` · ${(det.temperature as number).toFixed(1)}°C`
-                : ''}
-            </span>
-          </div>
-        ))}
-        {(!framePayload || framePayload.fused_detections.length === 0) && (
-          <span style={{ color: '#1E3A5F', fontSize: 11, fontFamily: 'monospace' }}>
-            sin detecciones
-          </span>
-        )}
-      </div>
-
-      {detections.length > 0 && (
-        <div style={{
-          borderTop: '1px solid #1E3A5F', paddingTop: 8,
-          color: '#78909C', fontSize: 10, fontFamily: 'monospace'
-        }}>
-          📍 {detections.length} evento{detections.length > 1 ? 's' : ''} en el mapa
-        </div>
-      )}
     </div>
   )
 }

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from modules.drone.simulator import simulate_telemetry
 from modules.detection.yolo_detector import YoloDetector
 from modules.detection.thermal_detector import ThermalDetector
-from modules.detection.thermal_simulator import ThermalSimulator   # ← nuevo
+from modules.detection.thermal_simulator import ThermalSimulator   # ← Simulacion de camara térmica
 from modules.detection.fusion import fuse_detections
 from core.state import drone_state, search_grid
 import json, cv2, numpy as np, base64, asyncio, time, uuid
@@ -17,18 +17,64 @@ app.add_middleware(
 
 yolo = YoloDetector(model_size="yolov8n")
 thermal = ThermalDetector()
-thermal_sim = ThermalSimulator()          # ← nuevo
+thermal_sim = ThermalSimulator()          # ← Simulacion de camara térmica
 last_detection_time = 0.0
 DETECTION_COOLDOWN = 3.0
 grid_clients: list[WebSocket] = []
+
+# Variable global para trackear si ya hay una simulación corriendo
+_simulation_running = False
+
+def open_camera() -> cv2.VideoCapture | None:
+    for index in [0, 1, 2]:
+        # CAP_DSHOW = DirectShow, evita Camo y otros virtuales
+        cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+        if cap.isOpened():
+            ret, frame = cap.read()
+            if ret and frame is not None and frame.size > 0:
+                print(f"✅ Cámara en índice {index} (DSHOW)")
+                return cap
+            cap.release()
+    print("⚠️ Sin cámara disponible")
+    return None
 
 @app.get("/")
 def health():
     return {"status": "AeroSearch AI online"}
 
+# Este es el dron. Envía Telemetría GPS, batería, estado.
 @app.websocket("/ws/mission")
 async def mission_websocket(websocket: WebSocket):
+    global _simulation_running
     await websocket.accept()
+    print("🔌 Misión conectada")
+
+    # Si ya hay una simulación corriendo, no arrancar otra
+    if _simulation_running:
+        print("⚠️  Simulación ya en curso, usando estado existente")
+        try:
+            while True:
+                # Solo mandar el estado actual sin re-simular
+                await websocket.send_text(json.dumps({
+                    "type": "telemetry",
+                    "data": {
+                        "position": {
+                            "lat": drone_state.lat,
+                            "lng": drone_state.lng,
+                            "altitude": drone_state.altitude,
+                            "timestamp": int(time.time() * 1000)
+                        },
+                        "battery": round(drone_state.battery, 1),
+                        "status": drone_state.status,
+                        "speed": 5.0
+                    }
+                }))
+                await asyncio.sleep(1)
+        except WebSocketDisconnect:
+            print("❌ Cliente secundario desconectado")
+        return
+
+    _simulation_running = True
     try:
         async for message in simulate_telemetry():
             changed_cells = search_grid.update_position(drone_state.lat, drone_state.lng)
@@ -45,15 +91,20 @@ async def mission_websocket(websocket: WebSocket):
                         grid_clients.remove(client)
             await websocket.send_text(json.dumps(message))
     except WebSocketDisconnect:
-        pass
+        print("❌ Misión desconectada")
+    finally:
+        _simulation_running = False  # liberar cuando termina
 
+# Envia Estado de la grilla
+# Event-driven. No tiene loop propio. Escucha y recibe broadcasts del canal de misión y detección
 @app.websocket("/ws/grid")
 async def grid_websocket(websocket: WebSocket):
     await websocket.accept()
+    # Se crea/agrega el cliente de la grilla
     grid_clients.append(websocket)
     await websocket.send_text(json.dumps({
         "type": "grid_init",
-        "cells": search_grid.get_all_cells(),
+        "cells": search_grid.get_all_cells(), # Devuelve lista de cells.values() (cada celda dict)
         "coverage": search_grid.coverage_percent()
     }))
     try:
@@ -62,29 +113,13 @@ async def grid_websocket(websocket: WebSocket):
     except WebSocketDisconnect:
         grid_clients.remove(websocket)
 
+# Envía  Video frames + detecciones IA
 @app.websocket("/ws/detection")
 async def detection_websocket(websocket: WebSocket):
     await websocket.accept()
     global last_detection_time
          
-    cap = cv2.VideoCapture(0)
-
-    # # IP que te muestra la app Camo en el iPhone
-    # CAMO_STREAM = "rtsp://192.168.1.X:7878/live"
-    # cap = cv2.VideoCapture(CAMO_STREAM, cv2.CAP_FFMPEG) #  es importante para streams RTSP — sin eso OpenCV a veces no los abre bien.
-    
-
-    # if not cap.isOpened():
-    #     print("⚠️  No se pudo conectar al celu, usando webcam local")
-    #     cap = cv2.VideoCapture(0)  # fallback a webcam
-
-    # Probar Camo primero, fallback a webcam
-    cap = cv2.VideoCapture(1)
-    if not cap.isOpened() or not cap.read()[0]:
-        cap = cv2.VideoCapture(2)
-    if not cap.isOpened() or not cap.read()[0]:
-        print("⚠️ Usando webcam local")
-        cap = cv2.VideoCapture(0)
+    cap = open_camera()
 
     # Leer dimensiones reales del frame
     frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) if cap else 640
@@ -107,8 +142,8 @@ async def detection_websocket(websocket: WebSocket):
             # 2. Detección RGB
             rgb_detections = yolo.detect(frame)
 
-            # 3. ── NUEVO: térmica simulada basada en detecciones reales ───
-            temp_matrix = thermal_sim.generate(rgb_detections)
+            # 3. Térmica simulada (para demo sin cámara térmica)
+            temp_matrix = thermal_sim.generate(frame) # genera matriz térmica 32x24 usando MediaPipe Pose
             thermal_detections = thermal.detect(temp_matrix)
 
             # 4. Fusión
@@ -158,6 +193,7 @@ async def detection_websocket(websocket: WebSocket):
                             "timestamp": int(time.time() * 1000)
                         }
                     }))
+
             # 6. ── NUEVO: tres vistas del frame ──────────────────────────
             # Vista 1: RGB con bounding boxes
             annotated = yolo.draw(frame.copy(), rgb_detections)
@@ -165,7 +201,7 @@ async def detection_websocket(websocket: WebSocket):
             frame_b64 = base64.b64encode(buf).decode()
 
             # Vista 2: overlay térmico sobre el frame (lo nuevo)
-            thermal_overlay = thermal_sim.overlay_on_frame(frame, temp_matrix, alpha=0.5)
+            thermal_overlay = thermal_sim.overlay_on_frame(frame, temp_matrix, alpha=0.65)  # era 0.45
             _, buf2 = cv2.imencode('.jpg', thermal_overlay, [cv2.IMWRITE_JPEG_QUALITY, 60])
             overlay_b64 = base64.b64encode(buf2).decode()
 

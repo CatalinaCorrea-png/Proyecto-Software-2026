@@ -29,6 +29,7 @@ export function useMission(lastMessage: WsMessage | null): MissionState {
       })
     }
 
+    //! ESTE YA NO SE USA. TENEMOS useDetectionFeed PARA ESO. DEBERÍAMOS ELIMINARLO.
     if (lastMessage.type === 'detection') {
       setDetections(prev => [lastMessage.data, ...prev].slice(0, 50)) // agrega al principio
     }
