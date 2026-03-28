@@ -1,0 +1,23 @@
+# Python compilado
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Modelos de ML — demasiado grandes para Git
+*.task
+*.pt
+*.onnx
+*.pkl
+
+# Entorno virtual
+venv/
+.env
+
+# Node
+node_modules/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
