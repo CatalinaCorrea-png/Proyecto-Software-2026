@@ -55,8 +55,9 @@ export function TelemetryPanel({ telemetry, isConnected, detectionCount }: Props
         <Stat label="ALTITUD" value={telemetry ? `${telemetry.position.altitude}m` : '--'} />
         <Stat label="VELOCIDAD" value={telemetry ? `${telemetry.speed} m/s` : '--'} />
         <Stat label="ESTADO" value={telemetry?.status ?? '--'} />
-        <Stat label="DETECCIONES" value={String(detectionCount)} color="#FF6D00" />
         <Stat label="LAT" value={telemetry ? telemetry.position.lat.toFixed(5) : '--'} />
+        <Stat label="LNG" value={telemetry ? telemetry.position.lng.toFixed(5) : '--'} />
+        <Stat label="DETECCIONES" value={String(detectionCount)} color="#FF6D00" />
         <Stat label="MISIÓN" value={formatElapsed(lastElapsedRef.current)} color="#00BCD4"/>
       </div>
     </div>

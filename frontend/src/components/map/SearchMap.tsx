@@ -1,9 +1,10 @@
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { CoverageGrid } from './CoverageGrid'          // ← nuevo
 import { useSearchGrid } from '../../hooks/useSearchGrid'  // ← nuevo
 import type { DroneTelemetry, Detection } from '../../types'
+import { useEffect, useRef } from 'react'
 
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -44,9 +45,35 @@ interface SearchMapProps {
 
 const DEFAULT_CENTER = { lat: -34.6083, lng: -58.3712 }
 
+// Componente para centrar el mapa en la posición inicial del drone
+function MapFollower({ position }: { position: { lat: number; lng: number } }) {
+  const map = useMap()
+  const initializedRef = useRef(false) // flag de inicialización — no necesitamos re-render, solo recordar si ya inicializamos.
+
+  useEffect(() => {
+    const pos = L.latLng(position.lat, position.lng)
+
+    if (!initializedRef.current) {
+      // Primera telemetría → centrar sin animación
+      map.setView(pos, 16)
+      initializedRef.current = true
+      return
+    }
+
+    // Si el dron sigue visible → no hacer nada
+    if (map.getBounds().contains(pos)) return
+
+    // Si salió de la vista → recentrar suavemente
+    map.panTo(pos, { animate: true, duration: 0.8 })
+
+  }, [position.lat, position.lng])
+
+  return null
+}
+
 export function SearchMap({ telemetry, detections, trail }: SearchMapProps) {
   const center = telemetry?.position ?? DEFAULT_CENTER
-  const { cells, coverage } = useSearchGrid('ws://localhost:8000/ws/grid')  // ← nuevo
+  const { cells, coverage } = useSearchGrid('ws://localhost:8000/ws/grid')  // ← grilla de cobertura
 
   return (
     <div style={{ position: 'relative', height: '100%' }}>
@@ -63,13 +90,16 @@ export function SearchMap({ telemetry, detections, trail }: SearchMapProps) {
 
       <MapContainer
         center={[center.lat, center.lng]}
-        zoom={16}
+        zoom={13}
         style={{ height: '100%', width: '100%', borderRadius: '8px' }}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="© OpenStreetMap"
         />
+
+        {/* Componente para seguir al drone */}
+        {telemetry && <MapFollower position={telemetry.position} />}
 
         {/* Grilla de cobertura */}
         <CoverageGrid cells={cells} />

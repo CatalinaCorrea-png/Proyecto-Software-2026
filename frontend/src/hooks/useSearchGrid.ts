@@ -42,17 +42,17 @@ export function useSearchGrid(url: string): UseSearchGridReturn {
           // Cargar todas las celdas de una vez
           const map = new Map<string, GridCell>()
           msg.cells.forEach(c => map.set(`${c.row}-${c.col}`, c))
-          cellMapRef.current = map
-          setCells(msg.cells)
+          cellMapRef.current = map  // construye el índice desde cero
+          setCells(msg.cells)       // carga todas las celdas al estado
           setCoverage(msg.coverage)
         }
 
         if (msg.type === 'grid_update') {
-          // Solo actualizar las celdas que cambiaron
+          // Actualizar las celdas
           msg.cells.forEach(c => {
-            cellMapRef.current.set(`${c.row}-${c.col}`, c)
+            cellMapRef.current.set(`${c.row}-${c.col}`, c) // actualiza solo las que cambiaron
           })
-          setCells(Array.from(cellMapRef.current.values()))
+          setCells(Array.from(cellMapRef.current.values())) // reconstruye el array desde el Map
           setCoverage(msg.coverage)
         }
       }
