@@ -4,7 +4,10 @@ import time
 # 20 metros en grados decimales (aproximado, válido para latitudes medias)
 CELL_SIZE_METERS = 20
 METERS_PER_LAT_DEGREE = 111_000
-METERS_PER_LNG_DEGREE = 111_000 * math.cos(math.radians(-34.6))  # ajustado para Buenos Aires
+ # ajustado para Buenos Aires
+# METERS_PER_LNG_DEGREE = 111_000 * math.cos(math.radians(-34.6)) 
+# dinámico según la latitud real
+METERS_PER_LNG_DEGREE = 111_000 * math.cos(math.radians(-32.6))  # Aconcagua
 
 CELL_LAT = CELL_SIZE_METERS / METERS_PER_LAT_DEGREE
 CELL_LNG = CELL_SIZE_METERS / METERS_PER_LNG_DEGREE
@@ -31,8 +34,8 @@ class SearchGrid:
     def _init_cells(self):
         for r in range(self.rows):
             for c in range(self.cols):
-                lat = self.origin_lat - r * CELL_LAT
-                lng = self.origin_lng + c * CELL_LNG
+                lat = self.origin_lat - r * CELL_LAT  # ← decrece hacia el sur
+                lng = self.origin_lng + c * CELL_LNG  # ← crece hacia el este
                 self.cells[(r, c)] = {
                     "row": r,
                     "col": c,
