@@ -40,7 +40,7 @@ export function useDetectionFeed(url: string): UseDetectionFeedReturn {
       ws.onopen = () => setIsConnected(true)
       ws.onclose = () => {
         setIsConnected(false)
-        setTimeout(connect, 2000)
+        setTimeout(connect, 2000) // se llama a sí misma recursivamente 
       }
 
       ws.onmessage = (event) => {

@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react'
-import type { DroneTelemetry, Detection, WsMessage } from '../types'
+import type { DroneTelemetry, WsMessage } from '../types'
 
 interface MissionState {
   telemetry: DroneTelemetry | null
-  detections: Detection[]
   trail: Array<{ lat: number; lng: number }>  // rastro del drone
 }
 
 export function useMission(lastMessage: WsMessage | null): MissionState {
   const [telemetry, setTelemetry] = useState<DroneTelemetry | null>(null)
-  const [detections, setDetections] = useState<Detection[]>([])
   const [trail, setTrail] = useState<Array<{ lat: number; lng: number }>>([])
 
   useEffect(() => {
@@ -29,12 +27,8 @@ export function useMission(lastMessage: WsMessage | null): MissionState {
       })
     }
 
-    //! ESTE YA NO SE USA. TENEMOS useDetectionFeed PARA ESO. DEBERÍAMOS ELIMINARLO.
-    if (lastMessage.type === 'detection') {
-      setDetections(prev => [lastMessage.data, ...prev].slice(0, 50)) // agrega al principio
-    }
   }, [lastMessage]) // ← se ejecuta cada vez que lastMessage cambia
   //                       o sea, cada vez que llega un mensaje nuevo
 
-  return { telemetry, detections, trail }
+  return { telemetry, trail }
 }

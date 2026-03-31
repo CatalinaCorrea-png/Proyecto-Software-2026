@@ -6,6 +6,8 @@ interface Props {
 }
 
 // Tamaño de celda en grados (debe coincidir con el backend)
+//! AHORA NO COINCIDE -> HACER REFACTOR PARA QUE SE MANDEN EN grid_init DESDE EL BACK
+//! Y ACA LOS RECIBO POR PROPS DESDE SearchMap.tsx
 const CELL_LAT = 20 / 111_000
 const CELL_LNG = 20 / (111_000 * Math.cos((- 34.6 * Math.PI) / 180))
 

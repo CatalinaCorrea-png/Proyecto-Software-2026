@@ -3,7 +3,7 @@ export interface GpsPosition {
   lat: number
   lng: number
   altitude: number
-  timestamp: number
+  timestamp: number // Cuando se capturó, no cuando se procesó
 }
 
 // Estado del drone

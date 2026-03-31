@@ -173,6 +173,7 @@ async def detection_websocket(websocket: WebSocket):
                     # Celda naranja en la grilla
                     detection_cell = search_grid.mark_detection(drone_state.lat, drone_state.lng)
                     if detection_cell and grid_clients:
+                        # Broadcast a grid_clients para actualizar la celda y el porcentaje de cobertura
                         await asyncio.gather(*[
                             client.send_text(json.dumps({
                                 "type": "grid_update",
@@ -194,13 +195,13 @@ async def detection_websocket(websocket: WebSocket):
                         }
                     }))
 
-            # 6. ── NUEVO: tres vistas del frame ──────────────────────────
+            # 6. ── Tres vistas del frame ──────────────────────────
             # Vista 1: RGB con bounding boxes
             annotated = yolo.draw(frame.copy(), rgb_detections)
             _, buf = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 60])
             frame_b64 = base64.b64encode(buf).decode()
 
-            # Vista 2: overlay térmico sobre el frame (lo nuevo)
+            # Vista 2: overlay térmico sobre el frame
             thermal_overlay = thermal_sim.overlay_on_frame(frame, temp_matrix, alpha=0.65)  # era 0.45
             _, buf2 = cv2.imencode('.jpg', thermal_overlay, [cv2.IMWRITE_JPEG_QUALITY, 60])
             overlay_b64 = base64.b64encode(buf2).decode()
@@ -213,7 +214,7 @@ async def detection_websocket(websocket: WebSocket):
             await websocket.send_text(json.dumps({
                 "type": "frame",
                 "frame": frame_b64,
-                "thermal_overlay": overlay_b64,    # ← nuevo
+                "thermal_overlay": overlay_b64,   
                 "thermal_frame": thermal_b64,
                 "fused_detections": geo_detections,
                 "detection_count": len(fused)

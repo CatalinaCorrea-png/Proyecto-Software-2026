@@ -24,6 +24,7 @@ export function Dashboard() {
       gridTemplateRows: '100vh',
       width: '100vw',
       height: '100vh',
+      overflow: 'hidden',
       background: '#0A0E1A',
       gap: 10,
       padding: 10,
