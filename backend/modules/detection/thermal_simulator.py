@@ -113,7 +113,7 @@ class ThermalSimulator:
           matrix[mask == 1] = noise[mask == 1]
 
       # ── CABEZA ────────────────────────────────────────────────────────
-      paint_circle(0, radius=2, zone="cabeza")   # nariz como centro
+      paint_circle(0, radius=3, zone="cabeza")   # nariz como centro
 
       # ── TORSO —──────────────────────
       # ANTES:  polígono entre hombros y caderas : hombro_izq, hombro_der, cadera_der, cadera_izq → cuadrilátero
@@ -179,6 +179,7 @@ class ThermalSimulator:
     
     # 3. Aplicar colormap DESPUÉS de escalar (más fiel a los datos reales)
     colored = cv2.applyColorMap(scaled_intermediate, cv2.COLORMAP_INFERNO)
+    # colored = cv2.applyColorMap(normalized, cv2.COLORMAP_INFERNO) # utilizá este para menos resolucion
     
     # 4. Escalar al tamaño final
     scaled = cv2.resize(colored, (target_w, target_h),
