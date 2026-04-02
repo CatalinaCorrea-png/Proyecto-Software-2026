@@ -164,12 +164,26 @@ class ThermalSimulator:
 
   def to_visual_frame(self, temp_matrix: np.ndarray,
                       target_w: int, target_h: int) -> np.ndarray:
-      normalized = cv2.normalize(temp_matrix, None, 0, 255,
-                                  cv2.NORM_MINMAX, cv2.CV_8U)
-      colored = cv2.applyColorMap(normalized, cv2.COLORMAP_INFERNO)
-      scaled = cv2.resize(colored, (target_w, target_h),
-                          interpolation=cv2.INTER_NEAREST)
-      return scaled
+    # 1. Primero escalar a resolución intermedia con interpolación suave
+    #    (no directo a 640x480 porque pierde detalle)
+    intermediate_w = THERMAL_GRID_W * 8   # 32 * 8 = 256
+    intermediate_h = THERMAL_GRID_H * 8   # 24 * 8 = 192
+
+    normalized = cv2.normalize(temp_matrix, None, 0, 255,
+                                cv2.NORM_MINMAX, cv2.CV_8U)
+    
+    # 2. Escalar con INTER_CUBIC — suaviza los bordes entre celdas
+    scaled_intermediate = cv2.resize(normalized,
+                                     (intermediate_w, intermediate_h),
+                                     interpolation=cv2.INTER_CUBIC)
+    
+    # 3. Aplicar colormap DESPUÉS de escalar (más fiel a los datos reales)
+    colored = cv2.applyColorMap(scaled_intermediate, cv2.COLORMAP_INFERNO)
+    
+    # 4. Escalar al tamaño final
+    scaled = cv2.resize(colored, (target_w, target_h),
+                        interpolation=cv2.INTER_LINEAR)
+    return scaled
 
   def overlay_on_frame(self, rgb_frame: np.ndarray,
                         temp_matrix: np.ndarray,
