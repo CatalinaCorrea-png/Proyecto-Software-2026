@@ -46,27 +46,17 @@ interface SearchMapProps {
 const DEFAULT_CENTER = { lat: -34.6083, lng: -58.3712 }
 
 // Componente para centrar el mapa en la posición inicial del drone
-function MapFollower({ position }: { position: { lat: number; lng: number } }) {
+function InitialCenter({ position }: { position: [number, number] }) {
   const map = useMap()
-  const initializedRef = useRef(false) // flag de inicialización — no necesitamos re-render, solo recordar si ya inicializamos.
+  const centeredRef = useRef(false)
 
   useEffect(() => {
-    const pos = L.latLng(position.lat, position.lng)
-
-    if (!initializedRef.current) {
-      // Primera telemetría → centrar sin animación
-      map.setView(pos, 16)
-      initializedRef.current = true
-      return
+    // Solo centrar la primera vez que llega una posición válida
+    if (!centeredRef.current && position[0] !== 0 && position[1] !== 0) {
+      map.setView(position, 16)
+      centeredRef.current = true  // nunca más
     }
-
-    // Si el dron sigue visible → no hacer nada
-    if (map.getBounds().contains(pos)) return
-
-    // Si salió de la vista → recentrar suavemente
-    map.panTo(pos, { animate: true, duration: 0.8 })
-
-  }, [position.lat, position.lng])
+  }, [position, map])
 
   return null
 }
@@ -98,8 +88,8 @@ export function SearchMap({ telemetry, detections, trail }: SearchMapProps) {
           attribution="© OpenStreetMap"
         />
 
-        {/* Componente para seguir al drone */}
-        {telemetry && <MapFollower position={telemetry.position} />}
+        {/* Componente para centrar el mapa en la posición inicial del drone */}
+        {telemetry && (<InitialCenter position={[telemetry.position.lat, telemetry.position.lng]}/>)}
 
         {/* Grilla de cobertura */}
         <CoverageGrid cells={cells} />
