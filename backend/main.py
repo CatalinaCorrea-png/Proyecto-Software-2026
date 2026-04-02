@@ -6,6 +6,7 @@ from modules.detection.thermal_detector import ThermalDetector
 from modules.detection.thermal_simulator import ThermalSimulator   # ← Simulacion de camara térmica
 from modules.detection.fusion import fuse_detections
 from core.state import drone_state, search_grid
+from core.config import CAMERA_SOURCE, CAMERA_INDEX
 import json, cv2, numpy as np, base64, asyncio, time, uuid
 
 app = FastAPI(title="AeroSearch AI")
@@ -26,16 +27,26 @@ grid_clients: list[WebSocket] = []
 _simulation_running = False
 
 def open_camera() -> cv2.VideoCapture | None:
-    for index in [0, 1, 2]:
-        # CAP_DSHOW = DirectShow, evita Camo y otros virtuales
-        cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
-        if cap.isOpened():
-            ret, frame = cap.read()
-            if ret and frame is not None and frame.size > 0:
-                print(f"✅ Cámara en índice {index} (DSHOW)")
-                return cap
-            cap.release()
-    print("⚠️ Sin cámara disponible")
+    source, use_dshow = CAMERA_INDEX.get(CAMERA_SOURCE, (None, False))
+    
+    if source is None:
+        print("📷 Modo sintético")
+        return None
+    
+    # String = URL / int = index de camara local
+    if isinstance(source, str):
+        cap = cv2.VideoCapture(source) # sin CAP_DSHOW para URLs
+    else:
+        cap = cv2.VideoCapture(source, cv2.CAP_DSHOW if use_dshow else cv2.CAP_ANY)
+    
+    if cap.isOpened():
+        ret, frame = cap.read()
+        if ret and frame is not None and frame.size > 0:
+            print(f"✅ Cámara: {CAMERA_SOURCE} (índice o url: {source})")
+            return cap
+        cap.release()
+
+    print(f"⚠️ No se pudo abrir {CAMERA_SOURCE}, usando sintético")
     return None
 
 @app.get("/")

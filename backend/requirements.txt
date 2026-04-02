@@ -10,3 +10,4 @@ sqlalchemy
 python-dotenv
 Pillow
 mediapipe
+python-dotenv
