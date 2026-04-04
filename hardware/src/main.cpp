@@ -1,21 +1,23 @@
-#include "controller.h"
+#include <Arduino.h>
+#include "Controller.h"
+#include "Server.h"
 #include "secrets.h"
 #include <WebServer.h>
 #include <WiFi.h>
 
-Controller controller;
-imageHandler imageHandler;
+Drone::Controller controller;
+Drone::Server server;
 
 void setup() {
   Serial.begin(115200);
-  imageHandler.setup();
+  server.setup();
   controller.setup();
 }
 
 void loop() {
   server.handleClient();
 
-  bool updated = BP32.update();
+  bool updated = controller.getUpdated();
 
   static unsigned long last = 0;
 

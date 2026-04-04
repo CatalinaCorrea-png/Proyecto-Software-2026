@@ -1,11 +1,16 @@
-#include "controller.h"
+#include "Controller.h"
+
+namespace Drone {
 
 void Controller::setup() {
   ledcSetup(pwmChannel, pwmFreq, pwmResolution);
   ledcSetup(pwmChannel2, pwmFreq, pwmResolution);
   ledcAttachPin(pwmPin, pwmChannel);
   ledcAttachPin(pwmPin2, pwmChannel2);
-  BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
+  BP32.setup(
+        [this](GamepadPtr gp) { this->onConnectedGamepad(gp); },
+        [this](GamepadPtr gp) { this->onDisconnectedGamepad(gp); }
+    );
   BP32.forgetBluetoothKeys();
 }
 
@@ -32,4 +37,7 @@ void Controller::onConnectedGamepad(GamepadPtr gp) {
 void Controller::onDisconnectedGamepad(GamepadPtr gp) {
   Serial.println("Joystick desconectado");
   myGamepad = nullptr;
+}
+
+
 }

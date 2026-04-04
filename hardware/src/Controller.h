@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <Bluepad32.h>
 
+namespace Drone {
+
 class Controller {
 public:
   GamepadPtr myGamepad;
@@ -16,7 +18,11 @@ public:
   const int DEAD_ZONE = 10;
 
   void setup();
+  inline bool getUpdated() { return BP32.update(); }
   void onUpdate(bool updated);
   void onConnectedGamepad(GamepadPtr gp);
   void onDisconnectedGamepad(GamepadPtr gp);
 };
+
+}
+
