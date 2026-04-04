@@ -9,13 +9,14 @@ void Server::setup() {
       using namespace esp32cam;
       Config cfg;
       cfg.setPins(pins::AiThinker);
-      cfg.setResolution(loRes);
-      cfg.setBufferCount(1);
-      cfg.setJpeg(60);
+      cfg.setResolution(hiRes);
+      cfg.setBufferCount(2);
+      cfg.setJpeg(80);
 
       bool ok = Camera.begin(cfg);
       Serial.println(ok ? "CAMERA OK" : "CAMERA FAIL");
     }
+
     WiFi.persistent(false);
     WiFi.mode(WIFI_STA);
     WiFi.begin(WIFI_SSID, WIFI_PASS);

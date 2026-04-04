@@ -11,19 +11,23 @@ Drone::Server server;
 void setup() {
   Serial.begin(115200);
   server.setup();
-  controller.setup();
+  // controller.setup();
 }
 
 void loop() {
   server.handleClient();
 
+
+  /*
+  
   bool updated = controller.getUpdated();
 
   static unsigned long last = 0;
 
-  if (millis() - last > 20) {
+  if (millis() - last > 50) {
     last = millis();
 
     controller.onUpdate(updated);
   }
+  */
 }
