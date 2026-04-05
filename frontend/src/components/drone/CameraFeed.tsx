@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDetectionFeed } from '../../hooks/useDetectionFeed'
 import type { Detection } from '../../types'
+import type { Metrics } from './PerformancePanel'
 
 interface Props {
   onNewDetection?: (detection: Detection) => void
+  onMetricsUpdate?: (metrics: Metrics) => void
   expanded?: boolean
 }
 
 type ViewMode = 'rgb' | 'overlay' | 'thermal'
 
-export function CameraFeed({ onNewDetection, expanded = false }: Props) {
+export function CameraFeed({ onNewDetection, onMetricsUpdate, expanded = false }: Props) {
   const { framePayload, detections, isConnected } = useDetectionFeed('ws://localhost:8000/ws/detection')
   const [viewMode, setViewMode] = useState<ViewMode>('rgb')
   const lastDetectionRef = useRef<string | null>(null)
@@ -22,6 +24,13 @@ export function CameraFeed({ onNewDetection, expanded = false }: Props) {
       onNewDetection?.(latest)
     }
   }, [detections, onNewDetection])
+
+  // Cuando llega un frame nuevo con métricas, avisarle al padre
+  useEffect(() => {
+    if (framePayload?.metrics) {
+      onMetricsUpdate?.(framePayload.metrics)
+    }
+  }, [framePayload, onMetricsUpdate])
 
   const viewLabels: Record<ViewMode, string> = {
     rgb: 'RGB', overlay: 'OVERLAY', thermal: 'TÉRMICA'

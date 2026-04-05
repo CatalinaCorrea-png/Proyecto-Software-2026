@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Detection } from '../types'
+import type { Metrics } from '../components/drone/PerformancePanel'
 
 interface FramePayload {
   type: 'frame'
@@ -12,6 +13,7 @@ interface FramePayload {
     temperature?: number
   }>
   detection_count: number
+  metrics: Metrics
 }
 
 interface DetectionEvent {

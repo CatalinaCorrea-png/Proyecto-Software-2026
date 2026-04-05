@@ -6,6 +6,7 @@ from modules.detection.thermal_detector import ThermalDetector
 from modules.detection.thermal_simulator import ThermalSimulator   # ← Simulacion de camara térmica
 from modules.detection.fusion import fuse_detections
 from core.state import drone_state, search_grid
+from core.metrics import metrics
 from core.config import CAMERA_SOURCE, CAMERA_INDEX
 import json, cv2, numpy as np, base64, asyncio, time, uuid
 
@@ -144,6 +145,9 @@ async def detection_websocket(websocket: WebSocket):
 
     try:
         while True:
+            frame_start = time.perf_counter()
+            metrics.record_frame() # <- FPS
+
             # 1. Frame
             if cap is not None:
                 ret, frame = cap.read()
@@ -152,16 +156,22 @@ async def detection_websocket(websocket: WebSocket):
             else:
                 frame = np.random.randint(80, 120, (frame_h, frame_w, 3), dtype=np.uint8)
 
-            # 2. Detección RGB
+            # 2. Detección RGB YOLO
+            t = time.perf_counter()
             rgb_detections = yolo.detect(frame)
+            metrics.record_yolo((time.perf_counter() - t) * 1000) # <- metrica
 
             # 3. Térmica simulada (para demo sin cámara térmica)
+            t = time.perf_counter()
             temp_matrix = thermal_sim.generate(frame) # genera matriz térmica 32x24 usando MediaPipe Pose
             thermal_detections = thermal.detect(temp_matrix)
+            metrics.record_thermal((time.perf_counter() - t) * 1000) # <- metrica
 
             # 4. Fusión
+            t = time.perf_counter()
             fused = fuse_detections(rgb_detections, thermal_detections,
                                     frame_w=frame_w, frame_h=frame_h)
+            metrics.record_fusion((time.perf_counter() - t) * 1000) # <- metrica
 
             # 5. GPS
             geo_detections = []
@@ -182,6 +192,7 @@ async def detection_websocket(websocket: WebSocket):
                 if det["confidence"] in ("high", "medium") and \
                    (now - last_detection_time) >= DETECTION_COOLDOWN:
                     last_detection_time = now
+                    metrics.record_detection(det["confidence"]) # <- metrica
 
                     # Celda naranja en la grilla
                     detection_cell = search_grid.mark_detection(drone_state.lat, drone_state.lng)
@@ -208,7 +219,9 @@ async def detection_websocket(websocket: WebSocket):
                         }
                     }))
 
-            # 6. ── Tres vistas del frame ──────────────────────────
+            # 6. ── Tres vistas del frame - Encoding ──────────────────────────
+            t = time.perf_counter()
+
             # Vista 1: RGB con bounding boxes
             annotated = yolo.draw(frame.copy(), rgb_detections)
             _, buf = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 60])
@@ -224,13 +237,19 @@ async def detection_websocket(websocket: WebSocket):
             _, buf3 = cv2.imencode('.jpg', thermal_pure)
             thermal_b64 = base64.b64encode(buf3).decode()
 
+            metrics.record_encode((time.perf_counter() - t) * 1000)  # <- metrica
+
+            total_elapsed = (time.perf_counter() - frame_start) * 1000
+            metrics.record_total(total_elapsed)  # <- metrica
+
             await websocket.send_text(json.dumps({
                 "type": "frame",
                 "frame": frame_b64,
                 "thermal_overlay": overlay_b64,   
                 "thermal_frame": thermal_b64,
                 "fused_detections": geo_detections,
-                "detection_count": len(fused)
+                "detection_count": len(fused),
+                "metrics": metrics.snapshot()  # <- metricas
             }))
 
             await asyncio.sleep(1/15)

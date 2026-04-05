@@ -6,6 +6,7 @@ import { CameraFeed } from '../components/drone/CameraFeed'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useMission } from '../hooks/useMission'
 import type { Detection } from '../types'
+import { type Metrics, PerformancePanel } from '../components/drone/PerformancePanel'
 
 type MainView = 'map' | 'camera'
 
@@ -13,11 +14,16 @@ export function Dashboard() {
   const { lastMessage, isConnected } = useWebSocket('ws://localhost:8000/ws/mission')
   const { telemetry, trail } = useMission(lastMessage)
   const [mapDetections, setMapDetections] = useState<Detection[]>([])
+  const [perfMetrics, setPerfMetrics] = useState<Metrics | null>(null)
   const [mainView, setMainView] = useState<MainView>('map')
 
   const handleNewDetection = useCallback((detection: Detection) => {
     if (detection.confidence === 'low') return
     setMapDetections(prev => [detection, ...prev].slice(0, 10))
+  }, [])
+
+  const handleMetricsUpdate = useCallback((metrics: Metrics) => {
+    setPerfMetrics(metrics)
   }, [])
 
   const isMapMain = mainView === 'map'
@@ -54,6 +60,7 @@ export function Dashboard() {
         ) : (
           <CameraFeed
             onNewDetection={handleNewDetection}
+            onMetricsUpdate={handleMetricsUpdate}
             expanded
           />
         )}
@@ -109,7 +116,7 @@ export function Dashboard() {
           flexShrink: 0,
         }}>
           {isMapMain ? (
-            <CameraFeed onNewDetection={handleNewDetection} />
+            <CameraFeed onNewDetection={handleNewDetection} onMetricsUpdate={handleMetricsUpdate}/>
           ) : (
             <div style={{ height: 400 }}>
               <SearchMap
@@ -129,6 +136,7 @@ export function Dashboard() {
       gap: 8,
       }}>
         {/* Alertas */}
+        <PerformancePanel metrics={perfMetrics} />
         <DetectionAlert detections={mapDetections} />
       </div>
 
