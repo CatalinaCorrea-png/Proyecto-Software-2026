@@ -5,6 +5,10 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import urllib.request
 import os
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import io
 
 AMBIENT_TEMP = 20.0
 THERMAL_GRID_W = 32
@@ -22,186 +26,236 @@ MODEL_PATH = "pose_landmarker_lite.task"
 MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task"
 
 class ThermalSimulator:
-  def __init__(self, frame_w: int = 640, frame_h: int = 480):
-      self.frame_w = frame_w
-      self.frame_h = frame_h
-      self._bg_phase = 0.0
+    def __init__(self, frame_w: int = 640, frame_h: int = 480):
+        self.frame_w = frame_w
+        self.frame_h = frame_h
+        self._bg_phase = 0.0
 
-      # Descargar modelo si no existe
-      if not os.path.exists(MODEL_PATH):
-          print("⬇️  Descargando modelo MediaPipe Pose...")
-          urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
-          print("✅ Modelo descargado")
+        # ── Descargar modelo Pose si no existe ───────────────────────────
+        if not os.path.exists(MODEL_PATH):
+            print("⬇️  Descargando modelo MediaPipe Pose...")
+            urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+            print("✅ Modelo descargado")
 
-      # Nueva API 0.10+
-      base_options = python.BaseOptions(model_asset_path=MODEL_PATH)
-      options = vision.PoseLandmarkerOptions(
-          base_options=base_options,
-          running_mode=vision.RunningMode.IMAGE,
-          num_poses=1,
-          min_pose_detection_confidence=0.5,
-          min_pose_presence_confidence=0.5,
-          min_tracking_confidence=0.5
-      )
-      self._detector = vision.PoseLandmarker.create_from_options(options)
+        # ── Pose Landmarker (nueva API 0.10+) ────────────────────────────
+        base_options = python.BaseOptions(model_asset_path=MODEL_PATH)
+        options = vision.PoseLandmarkerOptions(
+            base_options=base_options,
+            running_mode=vision.RunningMode.IMAGE,
+            num_poses=1,
+            min_pose_detection_confidence=0.5,
+            min_pose_presence_confidence=0.5,
+            min_tracking_confidence=0.5,
+            output_segmentation_masks=True   # ← pedir máscara de segmentación
+        )
+        self._pose_detector = vision.PoseLandmarker.create_from_options(options)
 
-  def generate(self, frame_bgr: np.ndarray) -> np.ndarray:
-      # Fondo variable
-      self._bg_phase += 0.04
-      base_temp = AMBIENT_TEMP + 2.5 * np.sin(self._bg_phase)
-      matrix = np.random.normal(base_temp, 1.0, (THERMAL_GRID_H, THERMAL_GRID_W))
+        # ── Selfie Segmentation (API legacy, más rápida para esto) ───────
+        # self._selfie_seg = mp.solutions.selfie_segmentation.SelfieSegmentation(
+        #     model_selection=0  # 0 = general (más rápido), 1 = landscape
+        # )
 
-      for _ in range(np.random.randint(0, 3)):
-          r = np.random.randint(0, THERMAL_GRID_H - 3)
-          c = np.random.randint(0, THERMAL_GRID_W - 3)
-          matrix[r:r+3, c:c+3] = np.random.normal(27.0, 1.0, (3, 3))
+        # ── Matplotlib — figura cacheada para interpolación bilinear ─────
+        self._fig, self._ax = plt.subplots(
+            figsize=(frame_w / 100, frame_h / 100), dpi=100
+        )
+        self._thermal_img = self._ax.imshow(
+            np.zeros((THERMAL_GRID_H, THERMAL_GRID_W)),
+            vmin=15, vmax=42,
+            cmap='inferno',
+            interpolation='bilinear'
+        )
+        self._ax.axis('off')
+        self._fig.tight_layout(pad=0)
 
-      # MediaPipe nueva API — necesita mp.Image
-      frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-      mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
-      results = self._detector.detect(mp_image)
+    def generate(self, frame_bgr: np.ndarray) -> np.ndarray:
+        """
+        Genera matriz de temperatura 32x24.
+        
+        Pipeline:
+        1. Selfie Segmentation → máscara de silueta exacta
+        2. Pose Landmarker → zonas del cuerpo (torso, brazos, piernas)
+        3. Combinar → temperatura diferenciada sobre silueta real
+        """
+        # Flip horizontal y resize — corregir espejo de la webcam
+        # frame_bgr = cv2.flip(frame_bgr, 1)
+        small = cv2.resize(frame_bgr, (320, 240))
+        # ── Fondo variable ────────────────────────────────────────────────
+        self._bg_phase += 0.04
+        base_temp = AMBIENT_TEMP + 2.5 * np.sin(self._bg_phase)
+        matrix = np.random.normal(base_temp, 1.0, (THERMAL_GRID_H, THERMAL_GRID_W))
 
-      if not results.pose_landmarks:
-          return matrix
+        for _ in range(np.random.randint(0, 3)):
+            r = np.random.randint(0, THERMAL_GRID_H - 3)
+            c = np.random.randint(0, THERMAL_GRID_W - 3)
+            matrix[r:r+3, c:c+3] = np.random.normal(27.0, 1.0, (3, 3))
 
-      if np.random.random() < FALSE_NEGATIVE_PROB:
-          return matrix
+        frame_rgb = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
 
-      # En 0.10+ los landmarks son listas de objetos con x, y, z, visibility
-      lm = results.pose_landmarks[0]  # primera persona
+        # ── PASO 1: Selfie Segmentation → silueta exacta ─────────────────
+        # ── Un solo detector hace pose + segmentación ─────────────────────
+        pose_result = self._pose_detector.detect(mp_image)
 
-      def to_grid(x_norm, y_norm):
-          gx = int(x_norm * THERMAL_GRID_W) + np.random.randint(-1, 2)
-          gy = int(y_norm * THERMAL_GRID_H) + np.random.randint(-1, 2)
-          return (
-              max(0, min(gx, THERMAL_GRID_W - 1)),
-              max(0, min(gy, THERMAL_GRID_H - 1))
-          )
-      
-      def vis(idx):
-          # Bajar de 0.3 a 0.15 — más permisivo
-          return lm[idx].visibility > 0.15 if hasattr(lm[idx], 'visibility') else True
+        if not pose_result.pose_landmarks:
+            return matrix
 
-      def paint_polygon(points_idx, zone, expand=0):
-          """
-          Dibuja un polígono relleno entre los landmarks dados.
-          Mucho más realista que puntos individuales.
-          """
-          pts = [to_grid(lm[i].x, lm[i].y) for i in points_idx if vis(i)]
-          if len(pts) < 3:
-              return
-          mean_temp, std_temp = ZONE_TEMPS[zone]
-          # Crear máscara del polígono
-          mask = np.zeros((THERMAL_GRID_H, THERMAL_GRID_W), dtype=np.uint8)
-          poly = np.array(pts, dtype=np.int32)
-          cv2.fillConvexPoly(mask, poly, 1)
-          # Pintar temperatura con ruido gaussiano en el área del polígono
-          noise = np.random.normal(mean_temp, std_temp,
-                                    (THERMAL_GRID_H, THERMAL_GRID_W))
-          matrix[mask == 1] = noise[mask == 1]
+        if np.random.random() < FALSE_NEGATIVE_PROB:
+            return matrix
 
-      def paint_circle(idx, radius, zone):
-          """Para partes pequeñas — cabeza, manos"""
-          if not vis(idx):
-              return
-          cx, cy = to_grid(lm[idx].x, lm[idx].y)
-          mean_temp, std_temp = ZONE_TEMPS[zone]
-          mask = np.zeros((THERMAL_GRID_H, THERMAL_GRID_W), dtype=np.uint8)
-          cv2.circle(mask, (cx, cy), radius, 1, -1)
-          noise = np.random.normal(mean_temp, std_temp,
-                                    (THERMAL_GRID_H, THERMAL_GRID_W))
-          matrix[mask == 1] = noise[mask == 1]
+        # ── Máscara de silueta del Pose Landmarker ────────────────────────
+        if pose_result.segmentation_masks:
+            seg_mask_full = pose_result.segmentation_masks[0].numpy_view()
+            seg_mask = cv2.resize(
+                (seg_mask_full > 0.5).astype(np.uint8),
+                (THERMAL_GRID_W, THERMAL_GRID_H),
+                interpolation=cv2.INTER_AREA
+            )
+            seg_mask = (seg_mask > 0).astype(np.uint8)
+        else:
+            # Fallback: silueta completa si no hay máscara
+            seg_mask = np.ones((THERMAL_GRID_H, THERMAL_GRID_W), dtype=np.uint8)
 
-      # ── CABEZA ────────────────────────────────────────────────────────
-      paint_circle(0, radius=3, zone="cabeza")   # nariz como centro
+        # Temperatura base sobre toda la silueta
+        body_temp = np.random.normal(35.5, 0.6, (THERMAL_GRID_H, THERMAL_GRID_W))
+        matrix[seg_mask == 1] = body_temp[seg_mask == 1]
 
-      # ── TORSO —──────────────────────
-      # ANTES:  polígono entre hombros y caderas : hombro_izq, hombro_der, cadera_der, cadera_izq → cuadrilátero
-      # AHORA: — usar hombros + punto estimado del centro del torso
-      shoulder_l = lm[11]
-      shoulder_r = lm[12]
+        # ── PASO 2: Pose Landmarker → zonas del cuerpo ───────────────────
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
+        pose_result = self._pose_detector.detect(mp_image)
 
-      if vis(11) and vis(12):
-          # Centro entre hombros
-          cx_s = (shoulder_l.x + shoulder_r.x) / 2
-          cy_s = (shoulder_l.y + shoulder_r.y) / 2
-          
-          # Estimar torso hacia abajo (30% de la altura del frame)
-          torso_cx, torso_cy = to_grid(cx_s, cy_s + 0.15)
-          
-          # Pintar polígono con puntos estimados aunque no haya caderas visibles
-          pts = [
-              to_grid(shoulder_l.x, shoulder_l.y),
-              to_grid(shoulder_r.x, shoulder_r.y),
-              to_grid(shoulder_r.x + 0.02, shoulder_r.y + 0.25),  # cadera der estimada
-              to_grid(shoulder_l.x - 0.02, shoulder_l.y + 0.25),  # cadera izq estimada
-          ]
-          mean_temp, std_temp = ZONE_TEMPS["torso"]
-          mask = np.zeros((THERMAL_GRID_H, THERMAL_GRID_W), dtype=np.uint8)
-          poly = np.array(pts, dtype=np.int32)
-          cv2.fillConvexPoly(mask, poly, 1)
-          noise = np.random.normal(mean_temp, std_temp, (THERMAL_GRID_H, THERMAL_GRID_W))
-          matrix[mask == 1] = noise[mask == 1]
+        # Temperatura base para toda la silueta (si no hay pose, uniforme)
+        body_temp = np.random.normal(35.5, 0.6, (THERMAL_GRID_H, THERMAL_GRID_W))
+        matrix[seg_mask == 1] = body_temp[seg_mask == 1]
 
-      # ── BRAZO IZQUIERDO — hombro → codo → muñeca ─────────────────────
-      paint_polygon([11, 13, 15], zone="brazos")
+        # Si no detectó pose, la silueta queda con temperatura uniforme
+        if not pose_result.pose_landmarks:
+            return matrix
 
-      # ── BRAZO DERECHO ─────────────────────────────────────────────────
-      paint_polygon([12, 14, 16], zone="brazos")
+        lm = pose_result.pose_landmarks[0]
 
-      # ── PIERNA IZQUIERDA — cadera → rodilla → tobillo ─────────────────
-      paint_polygon([23, 25, 27], zone="piernas")
+        def vis(idx: int) -> bool:
+            return lm[idx].visibility > 0.15 if hasattr(lm[idx], 'visibility') else True
 
-      # ── PIERNA DERECHA ────────────────────────────────────────────────
-      paint_polygon([24, 26, 28], zone="piernas")
+        def to_grid(x_norm: float, y_norm: float) -> tuple[int, int]:
+            gx = max(0, min(int(x_norm * THERMAL_GRID_W), THERMAL_GRID_W - 1))
+            gy = max(0, min(int(y_norm * THERMAL_GRID_H), THERMAL_GRID_H - 1))
+            return gx, gy
 
-      # ── MANOS (opcional, muy pequeñas en 32x24) ───────────────────────
-      paint_circle(15, radius=1, zone="brazos")  # muñeca izq
-      paint_circle(16, radius=1, zone="brazos")  # muñeca der
+        def zone_mask(points_idx: list[int]) -> np.ndarray:
+            """
+            Genera máscara de una zona corporal como polígono,
+            INTERSECTADA con la silueta real de Selfie Seg.
+            Esto garantiza que el calor solo aparece donde hay cuerpo real.
+            """
+            pts = [to_grid(lm[i].x, lm[i].y) for i in points_idx if vis(i)]
+            if len(pts) < 2:
+                return np.zeros((THERMAL_GRID_H, THERMAL_GRID_W), dtype=np.uint8)
 
-      return matrix
+            poly_mask = np.zeros((THERMAL_GRID_H, THERMAL_GRID_W), dtype=np.uint8)
 
+            if len(pts) == 2:
+                # Solo dos puntos → círculo en el centro
+                cx = (pts[0][0] + pts[1][0]) // 2
+                cy = (pts[0][1] + pts[1][1]) // 2
+                cv2.circle(poly_mask, (cx, cy), 3, 1, -1)
+            else:
+                hull = cv2.convexHull(np.array(pts, dtype=np.int32))
+                cv2.fillConvexPoly(poly_mask, hull, 1)
 
-  def to_visual_frame(self, temp_matrix: np.ndarray,
-                      target_w: int, target_h: int) -> np.ndarray:
-    # 1. Primero escalar a resolución intermedia con interpolación suave
-    #    (no directo a 640x480 porque pierde detalle)
-    intermediate_w = THERMAL_GRID_W * 8   # 32 * 8 = 256
-    intermediate_h = THERMAL_GRID_H * 8   # 24 * 8 = 192
+            # ← intersección con silueta real
+            return cv2.bitwise_and(poly_mask, seg_mask)
 
-    normalized = cv2.normalize(temp_matrix, None, 0, 255,
-                                cv2.NORM_MINMAX, cv2.CV_8U)
-    
-    # 2. Escalar con INTER_CUBIC — suaviza los bordes entre celdas
-    scaled_intermediate = cv2.resize(normalized,
-                                     (intermediate_w, intermediate_h),
-                                     interpolation=cv2.INTER_CUBIC)
-    
-    # 3. Aplicar colormap DESPUÉS de escalar (más fiel a los datos reales)
-    colored = cv2.applyColorMap(scaled_intermediate, cv2.COLORMAP_INFERNO)
-    # colored = cv2.applyColorMap(normalized, cv2.COLORMAP_INFERNO) # utilizá este para menos resolucion
-    
-    # 4. Escalar al tamaño final
-    scaled = cv2.resize(colored, (target_w, target_h),
-                        interpolation=cv2.INTER_LINEAR)
-    return scaled
+        def paint_zone(points_idx: list[int], zone: str):
+            mask = zone_mask(points_idx)
+            if mask.sum() == 0:
+                return
+            mean_temp, std_temp = ZONE_TEMPS[zone]
+            noise = np.random.normal(mean_temp, std_temp,
+                                     (THERMAL_GRID_H, THERMAL_GRID_W))
+            matrix[mask == 1] = noise[mask == 1]
 
-  def overlay_on_frame(self, rgb_frame: np.ndarray,
-                        temp_matrix: np.ndarray,
-                        alpha: float = 0.45) -> np.ndarray:
-      h, w = rgb_frame.shape[:2]
-      thermal_visual = self.to_visual_frame(temp_matrix, w, h)
-      blended = cv2.addWeighted(rgb_frame, 1 - alpha, thermal_visual, alpha, 0)
-      vignette = self._make_vignette(h, w)
-      return (blended * vignette).astype(np.uint8)
+        # ── PASO 3: Pintar zonas sobre silueta ───────────────────────────
 
-  def _make_vignette(self, h: int, w: int) -> np.ndarray:
-      if not hasattr(self, '_vignette_cache') or \
-          self._vignette_cache.shape != (h, w, 1):
-          x = np.linspace(-1, 1, w)
-          y = np.linspace(-1, 1, h)
-          xv, yv = np.meshgrid(x, y)
-          dist = np.sqrt(xv**2 + yv**2)
-          vignette = np.clip(1.0 - 0.5 * dist, 0.6, 1.0)
-          self._vignette_cache = vignette[:, :, np.newaxis]
-      return self._vignette_cache
+        # CABEZA — nariz, ojos, orejas, boca
+        paint_zone([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], zone="cabeza")
+
+        # CUELLO — entre orejas y hombros
+        paint_zone([7, 8, 11, 12], zone="cabeza")
+
+        # TORSO — hombros + caderas estimadas
+        shoulder_l, shoulder_r = lm[11], lm[12]
+        if vis(11) and vis(12):
+            # Expandir el torso hacia abajo para incluir zona abdominal
+            torso_pts = [
+                to_grid(shoulder_l.x - 0.03, shoulder_l.y),
+                to_grid(shoulder_r.x + 0.03, shoulder_r.y),
+                to_grid(shoulder_r.x + 0.05, shoulder_r.y + 0.28),
+                to_grid(shoulder_l.x - 0.05, shoulder_l.y + 0.28),
+            ]
+            if vis(23) and vis(24):
+                # Si hay caderas reales, usarlas
+                torso_pts[2] = to_grid(lm[24].x + 0.02, lm[24].y)
+                torso_pts[3] = to_grid(lm[23].x - 0.02, lm[23].y)
+
+            torso_poly = np.zeros((THERMAL_GRID_H, THERMAL_GRID_W), dtype=np.uint8)
+            hull = cv2.convexHull(np.array(torso_pts, dtype=np.int32))
+            cv2.fillConvexPoly(torso_poly, hull, 1)
+            torso_final = cv2.bitwise_and(torso_poly, seg_mask)
+
+            mean_temp, std_temp = ZONE_TEMPS["torso"]
+            noise = np.random.normal(mean_temp, std_temp, (THERMAL_GRID_H, THERMAL_GRID_W))
+            matrix[torso_final == 1] = noise[torso_final == 1]
+
+        # BRAZO IZQUIERDO — hombro, codo, muñeca, mano
+        paint_zone([11, 13, 15, 17, 19], zone="brazos")
+
+        # BRAZO DERECHO
+        paint_zone([12, 14, 16, 18, 20], zone="brazos")
+
+        # PIERNA IZQUIERDA — cadera, rodilla, tobillo, pie
+        paint_zone([23, 25, 27, 29, 31], zone="piernas")
+
+        # PIERNA DERECHA
+        paint_zone([24, 26, 28, 30, 32], zone="piernas")
+
+        # ── Suavizado final — blur leve para transiciones más naturales ───
+        # Simula la difusión de calor que hace un sensor real
+        matrix = cv2.GaussianBlur(matrix, (3, 3), 0)
+
+        return matrix
+
+    def to_visual_frame(self, temp_matrix: np.ndarray,
+                        target_w: int, target_h: int) -> np.ndarray:
+        # Normalizar a 0-255
+        normalized = cv2.normalize(
+            temp_matrix, None, 0, 255,
+            cv2.NORM_MINMAX, cv2.CV_8U
+        )
+        # Colormap INFERNO o BONE
+        colored = cv2.applyColorMap(normalized, cv2.COLORMAP_INFERNO)
+        # Escalar con interpolación cúbica (suave, no pixelado)
+        return cv2.resize(
+            colored, (target_w, target_h),
+            interpolation=cv2.INTER_CUBIC
+        )
+
+    def overlay_on_frame(self, rgb_frame: np.ndarray,
+                         temp_matrix: np.ndarray,
+                         alpha: float = 0.55) -> np.ndarray:
+        h, w = rgb_frame.shape[:2]
+        thermal_visual = self.to_visual_frame(temp_matrix, w, h)
+        blended = cv2.addWeighted(rgb_frame, 1 - alpha, thermal_visual, alpha, 0)
+        vignette = self._make_vignette(h, w)
+        return (blended * vignette).astype(np.uint8)
+
+    def _make_vignette(self, h: int, w: int) -> np.ndarray:
+        if not hasattr(self, '_vignette_cache') or \
+           self._vignette_cache.shape != (h, w, 1):
+            x = np.linspace(-1, 1, w)
+            y = np.linspace(-1, 1, h)
+            xv, yv = np.meshgrid(x, y)
+            dist = np.sqrt(xv**2 + yv**2)
+            vignette = np.clip(1.0 - 0.5 * dist, 0.6, 1.0)
+            self._vignette_cache = vignette[:, :, np.newaxis]
+        return self._vignette_cache
