@@ -1,40 +1,42 @@
 import { useEffect, useRef, useState } from 'react'
-import { useDetectionFeed } from '../../hooks/useDetectionFeed'
 import type { Detection } from '../../types'
 import type { Metrics } from './PerformancePanel'
 
+export interface FusedDetection {
+  confidence: 'high' | 'medium' | 'low'
+  source: string
+  temperature?: number
+}
+
+export interface FramePayload {
+  type: 'frame'
+  frame: string
+  thermal_overlay?: string
+  thermal_frame: string
+  fused_detections: FusedDetection[]
+  detection_count: number
+  metrics: Metrics
+}
+
 interface Props {
-  onNewDetection?: (detection: Detection) => void
-  onMetricsUpdate?: (metrics: Metrics) => void
+  framePayload: FramePayload | null
+  isConnected: boolean
   expanded?: boolean
 }
 
 type ViewMode = 'rgb' | 'overlay' | 'thermal'
 
-export function CameraFeed({ onNewDetection, onMetricsUpdate, expanded = false }: Props) {
-  const { framePayload, detections, isConnected } = useDetectionFeed('ws://localhost:8000/ws/detection')
+const VIEW_LABELS: Record<ViewMode, string> = {
+  rgb: 'RGB', overlay: 'OVERLAY', thermal: 'TÉRMICA'
+}
+
+export function CameraFeed({ framePayload, isConnected, expanded = false }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('rgb')
-  const lastDetectionRef = useRef<string | null>(null)
 
-  useEffect(() => {
-    if (detections.length === 0) return
-    const latest = detections[0]
-    if (latest.id !== lastDetectionRef.current) {
-      lastDetectionRef.current = latest.id
-      onNewDetection?.(latest)
-    }
-  }, [detections, onNewDetection])
-
-  // Cuando llega un frame nuevo con métricas, avisarle al padre
-  useEffect(() => {
-    if (framePayload?.metrics) {
-      onMetricsUpdate?.(framePayload.metrics)
-    }
-  }, [framePayload, onMetricsUpdate])
-
-  const viewLabels: Record<ViewMode, string> = {
-    rgb: 'RGB', overlay: 'OVERLAY', thermal: 'TÉRMICA'
-  }
+  const currentFrame =
+    viewMode === 'rgb' ? framePayload?.frame
+    : viewMode === 'overlay' ? (framePayload?.thermal_overlay ?? framePayload?.frame)
+    : framePayload?.thermal_frame
 
   return (
     <div style={{
@@ -87,20 +89,16 @@ export function CameraFeed({ onNewDetection, onMetricsUpdate, expanded = false }
               transition: 'all 0.15s'
             }}
           >
-            {viewLabels[mode]}
+            {VIEW_LABELS[mode]}
           </button>
         ))}
       </div>
 
       {/* Frame — ocupa el espacio disponible */}
       <div style={{ flex: 1, borderRadius: 4, overflow: 'hidden', minHeight: 0 }}>
-        {framePayload?.frame ? (
+        {currentFrame ? (
           <img
-            src={`data:image/jpeg;base64,${
-              viewMode === 'rgb' ? framePayload.frame
-              : viewMode === 'overlay' ? (framePayload.thermal_overlay ?? framePayload.frame)
-              : framePayload.thermal_frame
-            }`}
+            src={`data:image/jpeg;base64,${currentFrame}`}
             style={{
               width: '100%', height: 'auto',
               objectFit: 'cover', display: 'block',

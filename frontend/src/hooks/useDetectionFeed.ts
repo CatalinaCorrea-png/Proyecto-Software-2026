@@ -1,20 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
+import type { FramePayload } from '../components/drone/CameraFeed'
 import type { Detection } from '../types'
-import type { Metrics } from '../components/drone/PerformancePanel'
+// import type { Metrics } from '../components/drone/PerformancePanel'
 
-interface FramePayload {
-  type: 'frame'
-  frame: string
-  thermal_overlay: string 
-  thermal_frame: string
-  fused_detections: Array<{
-    confidence: 'high' | 'medium' | 'low'
-    source: string
-    temperature?: number
-  }>
-  detection_count: number
-  metrics: Metrics
-}
+// interface FramePayload {
+//   type: 'frame'
+//   frame: string
+//   thermal_overlay: string 
+//   thermal_frame: string
+//   fused_detections: Array<{
+//     confidence: 'high' | 'medium' | 'low'
+//     source: string
+//     temperature?: number
+//   }>
+//   detection_count: number
+//   metrics: Metrics
+// }
 
 interface DetectionEvent {
   type: 'detection'

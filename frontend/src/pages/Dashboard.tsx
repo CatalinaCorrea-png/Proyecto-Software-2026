@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { SearchMap } from '../components/map/SearchMap'
 import { TelemetryPanel } from '../components/drone/TelemetryPanel'
 import { DetectionAlert } from '../components/alerts/DetectionAlert'
@@ -7,24 +7,35 @@ import { useWebSocket } from '../hooks/useWebSocket'
 import { useMission } from '../hooks/useMission'
 import type { Detection } from '../types'
 import { type Metrics, PerformancePanel } from '../components/drone/PerformancePanel'
+import { useDetectionFeed } from '../hooks/useDetectionFeed'
 
 type MainView = 'map' | 'camera'
 
 export function Dashboard() {
+  // ── WebSocket de misión —────────
   const { lastMessage, isConnected } = useWebSocket('ws://localhost:8000/ws/mission')
   const { telemetry, trail } = useMission(lastMessage)
+
+  // ── WebSocket de detección —────────
+  const { framePayload, detections, isConnected: camConnected } = useDetectionFeed('ws://localhost:8000/ws/detection')
   const [mapDetections, setMapDetections] = useState<Detection[]>([])
-  const [perfMetrics, setPerfMetrics] = useState<Metrics | null>(null)
   const [mainView, setMainView] = useState<MainView>('map')
+  const lastDetectionRef = useRef<string | null>(null)
+  // const [perfMetrics, setPerfMetrics] = useState<Metrics | null>(null)
 
-  const handleNewDetection = useCallback((detection: Detection) => {
-    if (detection.confidence === 'low') return
-    setMapDetections(prev => [detection, ...prev].slice(0, 10))
-  }, [])
+  // Procesar deteccione
+  useEffect(() => {
+    if (detections.length === 0) return
+    const latest = detections[0]
+    if (latest.id === lastDetectionRef.current) return
+    lastDetectionRef.current = latest.id
+    if (latest.confidence === 'low') return
+    setMapDetections(prev => [latest, ...prev].slice(0, 10))
+  }, [detections])
 
-  const handleMetricsUpdate = useCallback((metrics: Metrics) => {
-    setPerfMetrics(metrics)
-  }, [])
+  // const handleMetricsUpdate = useCallback((metrics: Metrics) => {
+  //   setPerfMetrics(metrics)
+  // }, [])
 
   const isMapMain = mainView === 'map'
 
@@ -59,8 +70,8 @@ export function Dashboard() {
           />
         ) : (
           <CameraFeed
-            onNewDetection={handleNewDetection}
-            onMetricsUpdate={handleMetricsUpdate}
+            framePayload={framePayload}
+            isConnected={camConnected}
             expanded
           />
         )}
@@ -116,7 +127,10 @@ export function Dashboard() {
           flexShrink: 0,
         }}>
           {isMapMain ? (
-            <CameraFeed onNewDetection={handleNewDetection} onMetricsUpdate={handleMetricsUpdate}/>
+            <CameraFeed 
+              framePayload={framePayload}
+              isConnected={camConnected}
+            />
           ) : (
             <div style={{ height: 400 }}>
               <SearchMap
@@ -136,7 +150,7 @@ export function Dashboard() {
       gap: 8,
       }}>
         {/* Alertas */}
-        <PerformancePanel metrics={perfMetrics} />
+        <PerformancePanel metrics={framePayload?.metrics ?? null} />
         <DetectionAlert detections={mapDetections} />
       </div>
 
