@@ -28,6 +28,8 @@ _simulation_running = False
 
 def open_camera() -> cv2.VideoCapture | None:
     source, use_dshow = CAMERA_INDEX.get(CAMERA_SOURCE, (None, False))
+    print(source, use_dshow)
+
     
     if source is None:
         print("📷 Modo sintético")

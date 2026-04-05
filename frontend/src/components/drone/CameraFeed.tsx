@@ -4,11 +4,12 @@ import type { Detection } from '../../types'
 
 interface Props {
   onNewDetection?: (detection: Detection) => void
+  expanded?: boolean
 }
 
 type ViewMode = 'rgb' | 'overlay' | 'thermal'
 
-export function CameraFeed({ onNewDetection }: Props) {
+export function CameraFeed({ onNewDetection, expanded = false }: Props) {
   const { framePayload, detections, isConnected } = useDetectionFeed('ws://localhost:8000/ws/detection')
   const [viewMode, setViewMode] = useState<ViewMode>('rgb')
   const lastDetectionRef = useRef<string | null>(null)
@@ -29,13 +30,15 @@ export function CameraFeed({ onNewDetection }: Props) {
   return (
     <div style={{
       background: '#0D1B2A',
-      border: '1px solid #1E3A5F',
-      borderRadius: '8px',
-      padding: '12px',
+      border: expanded ? 'none' : '1px solid #1E3A5F',
+      borderRadius: expanded ? 0 : 8,
+      padding: expanded ? 16 : 12,
       display: 'flex',
       flexDirection: 'column',
       gap: 8,
-      minHeight: 0
+      height: expanded ? '100%' : 'auto',
+      minHeight: 0,
+      boxSizing: 'border-box',
     }}>
 
       {/* Header */}
@@ -98,7 +101,7 @@ export function CameraFeed({ onNewDetection }: Props) {
           />
         ) : (
           <div style={{
-            background: '#060D14', height: 120, minHeight: 120,
+            background: '#060D14', height: expanded ? '100%' : 140, minHeight: 120,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: '#1E3A5F', fontSize: 12, fontFamily: 'monospace'
           }}>
