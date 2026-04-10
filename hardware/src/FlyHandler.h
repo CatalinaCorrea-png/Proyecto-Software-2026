@@ -4,6 +4,8 @@
 #include "Math.h"
 #include "DeltaTime.h"
 
+namespace Drone {
+
 struct IMUData {
   Vec3 acc;
   Vec3 gyro;
@@ -13,7 +15,7 @@ class FlyHandler {
 public:
   void init();
   void beginRead();
-  void update(DeltaTime dt);
+  void onUpdate(DeltaTime dt);
   IMUData readIMU();
 
   float getRoll() { return _roll; };
@@ -26,3 +28,5 @@ private:
   float _roll = 0;
   float _pitch = 0;
 };
+
+}  // namespace Drone
