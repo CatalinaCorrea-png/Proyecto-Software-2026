@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "Controller.h"
 #include "Server.h"
+#include "DeltaTime.h"
 #include "secrets.h"
 #include <WebServer.h>
 #include <WiFi.h>
@@ -8,18 +9,26 @@
 Drone::Controller controller;
 Drone::Server server;
 
+DeltaTime dt;
+
+uint32_t lastTime = 0.0f;
+
 void setup() {
   Serial.begin(115200);
-  server.setup();
-  // controller.setup();
+  server.init();
+
+  // controller.init();
 }
 
 void loop() {
+  uint32_t time = millis();
+  dt = time - lastTime;
+  lastTime = time;
+
   server.handleClient();
 
-
   /*
-  
+
   bool updated = controller.getUpdated();
 
   static unsigned long last = 0;

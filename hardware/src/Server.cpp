@@ -1,40 +1,71 @@
 #include "Server.h"
 
 namespace Drone {
-  
-void Server::setup() {
 
-    Serial.println();
-    {
-      using namespace esp32cam;
-      Config cfg;
-      cfg.setPins(pins::AiThinker);
-      cfg.setResolution(hiRes);
-      cfg.setBufferCount(2);
-      cfg.setJpeg(80);
+void Server::init() {
 
-      bool ok = Camera.begin(cfg);
-      Serial.println(ok ? "CAMERA OK" : "CAMERA FAIL");
+  Serial.println();
+  {
+    using namespace esp32cam;
+    Config cfg;
+    cfg.setPins(pins::AiThinker);
+    cfg.setResolution(hiRes);
+    cfg.setBufferCount(2);
+    cfg.setJpeg(80);
+
+    bool ok = Camera.begin(cfg);
+    Serial.println(ok ? "CAMERA OK" : "CAMERA FAIL");
+  }
+
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
+  Serial.print("http://");
+  Serial.println(WiFi.localIP());
+  Serial.println("  /cam-lo.jpg");
+  Serial.println("  /cam-hi.jpg");
+  Serial.println("  /cam-mid.jpg");
+  Serial.println("  /stream");
+
+  webServer.on("/cam-lo.jpg", [this]() { this->handleJpgLo(); });
+  webServer.on("/cam-hi.jpg", [this]() { this->handleJpgHi(); });
+  webServer.on("/cam-mid.jpg", [this]() { this->handleJpgMid(); });
+  webServer.on("/stream", [this]() { this->handleStream(); });
+
+  webServer.begin();
+}
+
+void Server::handleStream() {
+  WiFiClient client = webServer.client();
+
+  client.print("HTTP/1.1 200 OK\r\n"
+               "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n");
+
+  while (client.connected()) {
+    auto frame = esp32cam::capture();
+
+    if (!frame) {
+      Serial.println("CAPTURE FAIL");
+      continue;
     }
 
-    WiFi.persistent(false);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-    }
-    Serial.print("http://");
-    Serial.println(WiFi.localIP());
-    Serial.println("  /cam-lo.jpg");
-    Serial.println("  /cam-hi.jpg");
-    Serial.println("  /cam-mid.jpg");
+    client.print("--frame\r\n");
+    client.print("Content-Type: image/jpeg\r\n");
+    client.print("Content-Length: ");
+    client.print(frame->size());
+    client.print("\r\n\r\n");
 
-    webServer.on("/cam-lo.jpg",  [this]() { this->handleJpgLo(); });
-    webServer.on("/cam-hi.jpg",  [this]() { this->handleJpgHi(); });
-    webServer.on("/cam-mid.jpg", [this]() { this->handleJpgMid(); });
+    frame->writeTo(client);
+    client.print("\r\n");
 
-    webServer.begin();
+    delay(30);  // controla FPS
+    yield();
+  }
 
+  client.stop();
 }
 
 void Server::serveJpg() {
@@ -74,4 +105,4 @@ void Server::handleJpgMid() {
   serveJpg();
 }
 
-}
+}  // namespace Drone
