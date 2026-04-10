@@ -1,5 +1,7 @@
 #include "FlyHandler.h"
 
+namespace Drone {
+
 void FlyHandler::init() {
   Wire.begin(21, 22);  // SDA, SCL
 
@@ -19,7 +21,7 @@ void FlyHandler::beginRead() {
   Wire.requestFrom(_address, (uint8_t)14, (uint8_t)true);
 }
 
-void FlyHandler::update(DeltaTime dt) {
+void FlyHandler::onUpdate(DeltaTime dt) {
   IMUData imu = readIMU();
 
   float roll_acc = atan2(imu.acc.y, imu.acc.z) * 180 / PI;
@@ -50,3 +52,5 @@ IMUData FlyHandler::readIMU() {
 
   return data;
 }
+
+}  // namespace Drone
