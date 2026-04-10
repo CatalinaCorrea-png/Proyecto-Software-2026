@@ -15,8 +15,11 @@ public:
   void onConnectedGamepad(GamepadPtr gp);
   void onDisconnectedGamepad(GamepadPtr gp);
 
+  int getThrottle() { return _throttle; }
+
 private:
   GamepadPtr _gamepad;
+  int _throttle = 0;
 };
 
 }  // namespace Drone

@@ -3,17 +3,19 @@
 
 namespace Drone {
 
-class MotorHandler {
+class Motor {
 
 public:
+  Motor(int pwmPin, int pwmChannel) : _pwmPin(pwmPin), _pwmChannel(pwmChannel) {}
+
   void init();
   void onUpdate();
-  static void setSpeed(uint8_t speed);
+  void setSpeed(uint8_t speed);
 
 private:
-  static uint8_t _speed;
-  const int _pwmPin = 18;
-  const int _pwmChannel = 0;
+  uint8_t _speed;
+  const int _pwmPin;
+  const int _pwmChannel;
   const int _pwmFreq = 20000;
   const int _pwmResolution = 8;
 };

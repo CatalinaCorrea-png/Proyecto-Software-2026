@@ -1,5 +1,4 @@
 #include "Controller.h"
-#include "MotorHandler.h"
 
 namespace Drone {
 
@@ -12,14 +11,19 @@ void Controller::init() {
 
 void Controller::onUpdate(bool updated) {
   if (updated && _gamepad && _gamepad->isConnected()) {
-    int ly = _gamepad->axisY();
-    int ry = _gamepad->axisRY();
+    int ly = _gamepad->axisY();  // -512 arriba, +512 abajo
 
-    int speed = (ly < -DEAD_ZONE) ? constrain(map(-ly, DEAD_ZONE, 512, 0, 255), 0, 255) : 0;
+    if (ly < -DEAD_ZONE) {
+      // stick arriba → sube throttle gradualmente
+      int delta = map(-ly, DEAD_ZONE, 512, 1, 5);
+      _throttle = constrain(_throttle + delta, 0, 255);
+    } else if (ly > DEAD_ZONE) {
+      // stick abajo → baja throttle gradualmente
+      int delta = map(ly, DEAD_ZONE, 512, 1, 5);
+      _throttle = constrain(_throttle - delta, 0, 255);
+    }
 
-    MotorHandler::setSpeed(speed);
-
-    Serial.printf("LY: %4d → Motor1: %3d", ly, speed);
+    // stick en zona muerta → _throttle no cambia, mantiene altura
   }
 }
 

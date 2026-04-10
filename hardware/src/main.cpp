@@ -4,13 +4,11 @@
 #include "Server.h"
 #include "DeltaTime.h"
 #include "FlyHandler.h"
-#include "MotorHandler.h"
 #include "secrets.h"
 
 Drone::Controller controller;
 Drone::Server server;
 Drone::FlyHandler flyHandler;
-Drone::MotorHandler motor;
 
 DeltaTime dt;
 
@@ -21,7 +19,6 @@ void setup() {
   server.init();
   controller.init();
   flyHandler.init();
-  motor.init();
 }
 
 void loop() {
@@ -38,8 +35,8 @@ void loop() {
   if (millis() - last > 50) {
     last = millis();
 
+    int throttle = controller.getThrottle();
+    flyHandler.onUpdate(dt, throttle);
     controller.onUpdate(updated);
-    motor.onUpdate();
-    flyHandler.onUpdate(dt);
   }
 }
