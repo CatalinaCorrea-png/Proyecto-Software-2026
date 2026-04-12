@@ -16,6 +16,11 @@ app.add_middleware(
     allow_methods=["*"], allow_headers=["*"],
 )
 
+@app.on_event("shutdown")
+def shutdown_event():
+    if _grabber is not None:
+        _grabber.stop()
+
 yolo = YoloDetector(model_size="yolov8n")
 thermal = ThermalDetector()
 thermal_sim = ThermalSimulator()          # ← Simulacion de camara térmica
@@ -205,14 +210,24 @@ async def grid_websocket(websocket: WebSocket):
     except WebSocketDisconnect:
         grid_clients.remove(websocket)
 
+# Singleton: una sola conexión al ESP32 compartida por todos los clientes
+_grabber: FrameGrabber | None = None
+
+def get_grabber() -> FrameGrabber:
+    global _grabber
+    if _grabber is None:
+        _grabber = FrameGrabber()
+        _grabber.start()
+    return _grabber
+
 # Envía  Video frames + detecciones IA
 @app.websocket("/ws/detection")
 async def detection_websocket(websocket: WebSocket):
     await websocket.accept()
     global last_detection_time
 
-    grabber = FrameGrabber()
-    has_camera = grabber.start()
+    grabber = get_grabber()
+    has_camera = grabber._running
 
     frame_w = grabber.frame_w
     frame_h = grabber.frame_h
@@ -243,60 +258,64 @@ async def detection_websocket(websocket: WebSocket):
             #     fused = fuse_detections(rgb_dets, t_dets, frame_w=frame_w, frame_h=frame_h)
             #     return rgb_dets, t_matrix, fused
             
-            def encode(f):
-                _, buf = cv2.imencode('.jpg', f, [cv2.IMWRITE_JPEG_QUALITY, 70])
-                return base64.b64encode(buf).decode()
+            # def encode(f):
+            #     _, buf = cv2.imencode('.jpg', f, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            #     return base64.b64encode(buf).decode()
 
+            rgb_detections = await asyncio.to_thread(yolo.detect, frame)
             # rgb_detections, temp_matrix, fused = await asyncio.to_thread(process, frame)
-            frame_b64 = await asyncio.to_thread(encode, frame)
+            # frame_b64 = await asyncio.to_thread(encode, frame)
 
             # 5. GPS
-            # geo_detections = []
-            # for det in fused:
-            #     geo_det = {
-            #         **det,
-            #         "id": str(uuid.uuid4()),
-            #         "position": {
-            #             "lat": drone_state.lat,
-            #             "lng": drone_state.lng,
-            #             "altitude": drone_state.altitude,
-            #             "timestamp": int(time.time() * 1000)
-            #         }
-            #     }
-            #     geo_detections.append(geo_det)
+            geo_detections = []
+            for det in rgb_detections:
+                geo_det = {
+                    **det,
+                    "id": str(uuid.uuid4()),
+                    "position": {
+                        "lat": drone_state.lat,
+                        "lng": drone_state.lng,
+                        "altitude": drone_state.altitude,
+                        "timestamp": int(time.time() * 1000)
+                    }
+                }
+                geo_detections.append(geo_det)
 
-            #     now = time.time()
-            #     if det["confidence"] in ("high", "medium") and \
-            #        (now - last_detection_time) >= DETECTION_COOLDOWN:
-            #         last_detection_time = now
+                conf = det["confidence"]
+                conf_label = "high" if conf > 0.7 else "medium" if conf > 0.4 else "low"
+                now = time.time()
+                if conf_label in ("high", "medium") and \
+                   (now - last_detection_time) >= DETECTION_COOLDOWN:
+                    last_detection_time = now
 
-            #         detection_cell = search_grid.mark_detection(drone_state.lat, drone_state.lng)
-            #         if detection_cell and grid_clients:
-            #             await asyncio.gather(*[
-            #                 client.send_text(json.dumps({
-            #                     "type": "grid_update",
-            #                     "cells": [detection_cell],
-            #                     "coverage": search_grid.coverage_percent()
-            #                 }))
-            #                 for client in grid_clients.copy()
-            #             ])
-            #         await websocket.send_text(json.dumps({
-            #             "type": "detection",
-            #             "data": {
-            #                 "id": geo_det["id"],
-            #                 "position": geo_det["position"],
-            #                 "confidence": det["confidence"],
-            #                 "source": det["source"],
-            #                 "temperature": det.get("temperature"),
-            #                 "timestamp": int(time.time() * 1000)
-            #             }
-            #         }))
+                    detection_cell = search_grid.mark_detection(drone_state.lat, drone_state.lng)
+                    if detection_cell and grid_clients:
+                        await asyncio.gather(*[
+                            client.send_text(json.dumps({
+                                "type": "grid_update",
+                                "cells": [detection_cell],
+                                "coverage": search_grid.coverage_percent()
+                            }))
+                            for client in grid_clients.copy()
+                        ])
+                    await websocket.send_text(json.dumps({
+                        "type": "detection",
+                        "data": {
+                            "id": geo_det["id"],
+                            "position": geo_det["position"],
+                            "confidence": conf_label,
+                            "source": det["source"],
+                            "temperature": det.get("temperature"),
+                            "timestamp": int(time.time() * 1000)
+                        }
+                    }))
 
-            # # 6. Encode frames en thread
+            # 6. Encode frames en thread
             # def encode_frames(f, rgb_dets, t_matrix):
-            #     annotated = yolo.draw(f.copy(), rgb_dets)
-            #     _, buf = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 60])
-            #     f_b64 = base64.b64encode(buf).decode()
+            def encode_frame(f, rgb_dets):
+                annotated = yolo.draw(f.copy(), rgb_dets)
+                _, buf = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                return base64.b64encode(buf).decode()
 
             #     thermal_overlay = thermal_sim.overlay_on_frame(f, t_matrix, alpha=0.65)
             #     _, buf2 = cv2.imencode('.jpg', thermal_overlay, [cv2.IMWRITE_JPEG_QUALITY, 60])
@@ -310,6 +329,9 @@ async def detection_websocket(websocket: WebSocket):
             # frame_b64, overlay_b64, thermal_b64 = await asyncio.to_thread(
             #     encode_frames, frame, rgb_detections, temp_matrix
             # )
+            frame_b64 = await asyncio.to_thread(
+                encode_frame, frame, rgb_detections
+            )
 
             await websocket.send_text(json.dumps({
                 "type": "frame",
@@ -320,13 +342,11 @@ async def detection_websocket(websocket: WebSocket):
                 # "detection_count": len(fused)
                 "thermal_overlay": None,
                 "thermal_frame": None,
-                "fused_detections": [],
-                "detection_count": 0
+                "fused_detections": geo_detections,
+                "detection_count": len(geo_detections)
             }))
 
             await asyncio.sleep(1/15)
 
     except WebSocketDisconnect:
         pass
-    finally:
-        grabber.stop()
