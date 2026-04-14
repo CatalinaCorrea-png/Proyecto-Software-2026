@@ -3,23 +3,23 @@
 namespace Drone {
 
 void FlyHandler::init() {
-  motorFL.init();
-  motorFR.init();
-  motorBL.init();
-  motorBR.init();
-  initIMU();
+  motorFL.init(13, 0);
+  motorFR.init(14, 1);
+  motorBL.init(15, 2);
+  motorBR.init(2, 3);
+  // initIMU();
 }
 
 void FlyHandler::initIMU() {
-  Wire.begin(21, 22);  // SDA, SCL
+  // Wire.begin(21, 22);  // SDA, SCL
 
-  // MPU6500 (sale de sleep)
-  Wire.beginTransmission(_address);
-  Wire.write(0x6B);  // PWR_MGMT_1
-  Wire.write(0x00);  // wake up
-  Wire.endTransmission();
+  // // MPU6500 (sale de sleep)
+  // Wire.beginTransmission(_address);
+  // Wire.write(0x6B);  // PWR_MGMT_1
+  // Wire.write(0x00);  // wake up
+  // Wire.endTransmission();
 
-  Serial.println("MPU6500 ready");
+  // Serial.println("MPU6500 ready");
 }
 
 void FlyHandler::beginRead() {

@@ -6,17 +6,17 @@ namespace Drone {
 class Motor {
 
 public:
-  Motor(int pwmPin, int pwmChannel) : _pwmPin(pwmPin), _pwmChannel(pwmChannel) {}
+  Motor() = default;
 
-  void init();
+  void init(int pwmPin, int pwmChannel);
   void onUpdate();
   void setSpeed(uint8_t speed);
 
 private:
   uint8_t _speed;
-  const int _pwmPin;
-  const int _pwmChannel;
-  const int _pwmFreq = 20000;
-  const int _pwmResolution = 8;
+  int _pwmPin;
+  int _pwmChannel;
+  int _pwmFreq = 20000;
+  int _pwmResolution = 8;
 };
 }  // namespace Drone

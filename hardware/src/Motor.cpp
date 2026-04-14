@@ -2,12 +2,15 @@
 
 namespace Drone {
 
-void Motor::init() {
+void Motor::init(int pwmPin, int pwmChannel) {
+  _pwmPin = pwmPin;
+  _pwmChannel = pwmChannel;
   ledcSetup(_pwmChannel, _pwmFreq, _pwmResolution);
   ledcAttachPin(_pwmPin, _pwmChannel);
 }
 
 void Motor::onUpdate() {
+
   ledcWrite(_pwmChannel, _speed);
 }
 

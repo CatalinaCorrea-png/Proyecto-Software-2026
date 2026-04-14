@@ -10,7 +10,7 @@ void Controller::init() {
 }
 
 void Controller::onUpdate(bool updated) {
-  if (updated && _gamepad && _gamepad->isConnected()) {
+  if (_gamepad && _gamepad->isConnected()) {
     int ly = _gamepad->axisY();  // -512 arriba, +512 abajo
 
     if (ly < -DEAD_ZONE) {
@@ -23,6 +23,7 @@ void Controller::onUpdate(bool updated) {
       _throttle = constrain(_throttle - delta, 0, 255);
     }
 
+    Serial.printf("Left Stick Y: %d\n", ly);
     // stick en zona muerta → _throttle no cambia, mantiene altura
   }
 }

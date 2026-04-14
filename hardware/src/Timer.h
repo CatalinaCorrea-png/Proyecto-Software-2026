@@ -5,7 +5,7 @@
 class Timer {
 
 public:
-  Timer(int interval) : _interval(interval) { _last = millis(); };
+  Timer(int interval) : _interval(interval), _last(millis()) {};
 
   bool tick() {
     uint32_t now = millis();

@@ -7,7 +7,7 @@
 #include "FlyHandler.h"
 #include "Timer.h"
 
-Drone::Controller controller;
+// Drone::Controller controller;
 Drone::Server server;
 Drone::FlyHandler flyHandler;
 
@@ -18,7 +18,7 @@ uint32_t lastTime = 0.0f;
 void setup() {
   Serial.begin(115200);
   server.init();
-  controller.init();
+  // controller.init();
   flyHandler.init();
 }
 
@@ -28,21 +28,21 @@ Timer ctrlTimer(5);  // cada 50ms = 20Hz (20x por seg)
 void loop() {
   server.handleClient();
 
-  bool updated = controller.getUpdated();
+  // bool updated = controller.getUpdated();
 
   {
     // Timed secuences
 
     if (ctrlTimer.tick())
-      controller.onUpdate(updated);
+      // controller.onUpdate(updated);
 
-    if (pidTimer.tick()) {
-      uint32_t time = millis();
-      dt = time - lastTime;
-      lastTime = time;
+      if (pidTimer.tick()) {
+        uint32_t time = millis();
+        dt = time - lastTime;
+        lastTime = time;
 
-      int throttle = controller.getThrottle();
-      flyHandler.onUpdate(dt, throttle);
-    }
+        // int throttle = controller.getThrottle();
+        // flyHandler.onUpdate(dt, throttle);
+      }
   }
 }

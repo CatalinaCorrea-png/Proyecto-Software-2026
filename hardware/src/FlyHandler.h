@@ -15,10 +15,10 @@ struct IMUData {
 
 class FlyHandler {
 public:
-  Motor motorFL{16, 0};
-  Motor motorFR{17, 1};
-  Motor motorBL{18, 2};
-  Motor motorBR{19, 3};
+  Motor motorFL;
+  Motor motorFR;
+  Motor motorBL;
+  Motor motorBR;
 
   PID pidRoll{1.2f, 0.01f, 0.4f};
   PID pidPitch{1.2f, 0.01f, 0.4f};
