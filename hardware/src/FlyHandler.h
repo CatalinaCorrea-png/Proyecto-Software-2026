@@ -3,6 +3,8 @@
 #include <Wire.h>
 #include "Math.h"
 #include "DeltaTime.h"
+#include "Motor.h"
+#include "PID.h"
 
 namespace Drone {
 
@@ -13,9 +15,18 @@ struct IMUData {
 
 class FlyHandler {
 public:
+  Motor motorFL;
+  Motor motorFR;
+  Motor motorBL;
+  Motor motorBR;
+
+  PID pidRoll{1.2f, 0.01f, 0.4f};
+  PID pidPitch{1.2f, 0.01f, 0.4f};
+
   void init();
+  void initIMU();
   void beginRead();
-  void onUpdate(DeltaTime dt);
+  void onUpdate(DeltaTime dt, int throttle);
   IMUData readIMU();
 
   float getRoll() { return _roll; };

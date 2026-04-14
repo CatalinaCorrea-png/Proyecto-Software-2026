@@ -1,19 +1,20 @@
-#include "MotorHandler.h"
+#include "Motor.h"
 
 namespace Drone {
 
-uint8_t MotorHandler::_speed = 0;
-
-void MotorHandler::init() {
+void Motor::init(int pwmPin, int pwmChannel) {
+  _pwmPin = pwmPin;
+  _pwmChannel = pwmChannel;
   ledcSetup(_pwmChannel, _pwmFreq, _pwmResolution);
   ledcAttachPin(_pwmPin, _pwmChannel);
 }
 
-void MotorHandler::onUpdate() {
+void Motor::onUpdate() {
+
   ledcWrite(_pwmChannel, _speed);
 }
 
-void MotorHandler::setSpeed(uint8_t speed) {
+void Motor::setSpeed(uint8_t speed) {
   _speed = speed;
 }
 
