@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import type { DroneTelemetry } from '../../types'
 
 interface Props {
@@ -6,11 +7,26 @@ interface Props {
   detectionCount: number
 }
 
+function formatElapsed(seconds: number | undefined): string {
+  if (seconds === undefined || isNaN(seconds)) return '--:--'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}h ${m.toString().padStart(2, '0')}m`
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
 export function TelemetryPanel({ telemetry, isConnected, detectionCount }: Props) {
   const batteryColor = !telemetry ? '#78909C'
     : telemetry.battery > 50 ? '#00C853'
     : telemetry.battery > 20 ? '#FFD600'
     : '#FF5252'
+
+  // Guardar último elapsed válido para no parpadear
+  const lastElapsedRef = useRef<number>(0)
+  if (telemetry?.elapsed !== undefined) {
+    lastElapsedRef.current = telemetry.elapsed
+  }
 
   return (
     <div style={{
@@ -34,13 +50,15 @@ export function TelemetryPanel({ telemetry, isConnected, detectionCount }: Props
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <Stat label="BATERÍA" value={telemetry ? `${telemetry.battery}%` : '--'} color={batteryColor} />
         <Stat label="ALTITUD" value={telemetry ? `${telemetry.position.altitude}m` : '--'} />
         <Stat label="VELOCIDAD" value={telemetry ? `${telemetry.speed} m/s` : '--'} />
         <Stat label="ESTADO" value={telemetry?.status ?? '--'} />
-        <Stat label="DETECCIONES" value={String(detectionCount)} color="#FF6D00" />
         <Stat label="LAT" value={telemetry ? telemetry.position.lat.toFixed(5) : '--'} />
+        <Stat label="LNG" value={telemetry ? telemetry.position.lng.toFixed(5) : '--'} />
+        <Stat label="DETECCIONES" value={String(detectionCount)} color="#FF6D00" />
+        <Stat label="MISIÓN" value={formatElapsed(lastElapsedRef.current)} color="#00BCD4"/>
       </div>
     </div>
   )
