@@ -30,6 +30,7 @@ export function useMission(lastMessage: WsMessage | null): MissionState {
     }
 
     if (lastMessage.type === 'detection') {
+       if (lastMessage.data.confidence === 'low') return // ignora detecciones de baja confianza
       setDetections(prev => [lastMessage.data, ...prev].slice(0, 50)) // agrega al principio
     }
   }, [lastMessage]) // ← se ejecuta cada vez que lastMessage cambia

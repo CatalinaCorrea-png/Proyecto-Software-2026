@@ -13,8 +13,20 @@ export function useWebSocket(url: string): UseWebSocketReturn {
 
   const [isConnected, setIsConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closedOnPurposeRef = useRef(false) // ← para distinguir cierre intencional vs inesperado
 
   const connect = useCallback(() => {
+    // Strict mode 
+    // Desactiva el onclose de la conexión anterior para que no reconecte
+    if (wsRef.current) {
+      wsRef.current.onclose = null
+      wsRef.current.close()
+    }
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current)
+      reconnectTimerRef.current = null
+    }
     const ws = new WebSocket(url) // abre conexión al backend
 
     ws.onopen = () => {
@@ -28,9 +40,12 @@ export function useWebSocket(url: string): UseWebSocketReturn {
     }
 
     ws.onclose = () => {
-      console.log('🔌 WebSocket desconectado, reconectando...')
       setIsConnected(false)
-      setTimeout(connect, 2000) // reconexión automática si se cae
+      // Solo reconecta si el cierre NO fue intencional (cleanup de React)
+      if (!closedOnPurposeRef.current) {
+        console.log('🔌 WebSocket desconectado, reconectando...')
+        reconnectTimerRef.current = setTimeout(connect, 2000)
+      }
     }
 
     ws.onerror = (error) => {
@@ -43,7 +58,16 @@ export function useWebSocket(url: string): UseWebSocketReturn {
 
   useEffect(() => {
     connect() // se ejecuta una sola vez al montar el componente
-    return () => wsRef.current?.close() // limpia cuando se desmonta
+    return () => {
+      // Marca cierre intencional para que onclose NO reconecte
+      closedOnPurposeRef.current = true
+      // Cancela cualquier reconexión pendiente
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
+      wsRef.current?.close()
+    }
   }, [connect])
 
   return { lastMessage, isConnected }
