@@ -18,9 +18,5 @@
 #define MPU_SDA
 #define MPU_SLC
 
-namespace Drone {
-
-constexpr float ACC_SCALE = 16384.0f;
-constexpr float GYRO_SCALE = 131.0f;
-
-}  // namespace Drone
+#define MPU_SDA_PIN = 21;
+#define MPU_SCL_PIN = 22;

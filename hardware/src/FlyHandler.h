@@ -26,6 +26,7 @@ public:
 
   void init();
   void initIMU();
+  void initGPS();
   void beginRead();
   void onUpdate(DeltaTime dt, int throttle);
   IMUData readIMU();

@@ -1,4 +1,5 @@
 #include "Server.h"
+#include <ArduinoJson.h>
 
 namespace Drone {
 
@@ -28,11 +29,13 @@ void Server::init() {
   PRINT("  /cam-hi.jpg");
   PRINT("  /cam-mid.jpg");
   PRINT("  /stream");
+  PRINT("  /status");
 
   webServer.on("/cam-lo.jpg", [this]() { this->handleJpgLo(); });
   webServer.on("/cam-hi.jpg", [this]() { this->handleJpgHi(); });
   webServer.on("/cam-mid.jpg", [this]() { this->handleJpgMid(); });
   webServer.on("/stream", [this]() { this->handleStream(); });
+  webServer.on("/status", [this]() { this->handleDroneData(); });
 
   webServer.begin();
 }
@@ -65,6 +68,21 @@ void Server::handleStream() {
   }
 
   client.stop();
+}
+
+void Server::handleDroneData() {
+  JsonDocument doc;
+  const DroneData &data = _drone->getDroneData();
+
+  doc["lat"] = data.lat;
+  doc["lng"] = data.lng;
+  doc["altitude"] = data.altitude;
+  // doc["battery"] = data.battery;
+
+  String json;
+  serializeJson(doc, json);
+
+  webServer.send(200, "application/json", json);
 }
 
 void Server::serveJpg() {
