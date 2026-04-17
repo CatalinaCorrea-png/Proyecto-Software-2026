@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <Bluepad32.h>
+#include "pch.h"
 
 namespace Drone {
 

@@ -5,6 +5,7 @@
 #include "DeltaTime.h"
 #include "Motor.h"
 #include "PID.h"
+#include "pch.h"
 
 namespace Drone {
 

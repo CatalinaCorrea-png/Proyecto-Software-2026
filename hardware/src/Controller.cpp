@@ -23,18 +23,18 @@ void Controller::onUpdate(bool updated) {
       _throttle = constrain(_throttle - delta, 0, 255);
     }
 
-    Serial.printf("Left Stick Y: %d\n", ly);
+    PRINT("Left Stick Y: %d\n", ly);
     // stick en zona muerta → _throttle no cambia, mantiene altura
   }
 }
 
 void Controller::onConnectedGamepad(GamepadPtr gp) {
-  Serial.println("Joystick conectado!");
+  PRINT("Joystick conectado!");
   _gamepad = gp;
 }
 
 void Controller::onDisconnectedGamepad(GamepadPtr gp) {
-  Serial.println("Joystick desconectado");
+  PRINT("Joystick desconectado");
   _gamepad = nullptr;
 }
 

@@ -4,6 +4,7 @@
 #include <esp32cam.h>
 #include <WiFi.h>
 #include <WebServer.h>
+#include "pch.h"
 
 namespace Drone {
 

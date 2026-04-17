@@ -3,15 +3,15 @@
 namespace Drone {
 
 void FlyHandler::init() {
-  motorFL.init(13, 0);
-  motorFR.init(14, 1);
-  motorBL.init(15, 2);
-  motorBR.init(2, 3);
+  motorFL.init(MOTOR_PIN1, 0);
+  motorFR.init(MOTOR_PIN2, 1);
+  motorBL.init(MOTOR_PIN3, 2);
+  motorBR.init(MOTOR_PIN4, 3);
   // initIMU();
 }
 
 void FlyHandler::initIMU() {
-  // Wire.begin(21, 22);  // SDA, SCL
+  // Wire.begin(MPU_SDA_PIN, MPU_SLC_PIN);  // SDA, SCL
 
   // // MPU6500 (sale de sleep)
   // Wire.beginTransmission(_address);
@@ -19,7 +19,7 @@ void FlyHandler::initIMU() {
   // Wire.write(0x00);  // wake up
   // Wire.endTransmission();
 
-  // Serial.println("MPU6500 ready");
+  // PRINT("MPU6500 ready");
 }
 
 void FlyHandler::beginRead() {
@@ -32,8 +32,8 @@ void FlyHandler::beginRead() {
 void FlyHandler::onUpdate(DeltaTime dt, int throttle) {
   IMUData imu = readIMU();
 
-  float roll_acc = atan2(imu.acc.y, imu.acc.z) * 180 / PI;
-  float pitch_acc = atan2(-imu.acc.x, sqrt(imu.acc.y * imu.acc.y + imu.acc.z * imu.acc.z)) * 180 / PI;
+  float roll_acc = atan2(imu.acc.y, imu.acc.z) * RAD_TO_DEG;
+  float pitch_acc = atan2(-imu.acc.x, sqrt(imu.acc.y * imu.acc.y + imu.acc.z * imu.acc.z)) * RAD_TO_DEG;
 
   _roll = _alpha * (_roll + imu.gyro.x * dt) + (1 - _alpha) * roll_acc;
   _pitch = _alpha * (_pitch + imu.gyro.y * dt) + (1 - _alpha) * pitch_acc;
