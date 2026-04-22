@@ -1,26 +1,29 @@
 #pragma once
 
-#include <Arduino.h>
-#include <Bluepad32.h>
+// #include <Arduino.h>
 #include "pch.h"
-
 namespace Drone {
 
-class Controller {
-public:
-  const int DEAD_ZONE = 10;
-
-  void init();
-  inline bool getUpdated() { return BP32.update(); }
-  void onUpdate(bool updated);
-  void onConnectedGamepad(GamepadPtr gp);
-  void onDisconnectedGamepad(GamepadPtr gp);
-
-  int getThrottle() { return _throttle; }
-
-private:
-  GamepadPtr _gamepad;
-  int _throttle = 0;
+struct Movement {
+  int16_t throttle;
+  int16_t pitch;
+  int16_t roll;
 };
+
+// class Controller {
+// public:
+//   const int DEAD_ZONE = 10;
+
+//   void init();
+
+//   void onUpdate(bool updated);
+
+//   void onMove(ControllerMovement move);
+
+//   int getMovement() { return _movement; }
+
+// private:
+//   ControllerMovement _movement;
+// };
 
 }  // namespace Drone

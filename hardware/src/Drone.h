@@ -1,8 +1,10 @@
 #pragma once
 
-#include "FlyHandler.h"
 #include <TinyGPS++.h>
 #include <HardwareSerial.h>
+#include "Controller.h"
+#include "FlyHandler.h"
+#include "pch.h"
 
 namespace Drone {
 
@@ -21,7 +23,7 @@ public:
   void init() {
     _flyHandler.init();
     // _controller.init();
-    initGPS();
+    // initGPS();
 
     updateData();
   }
@@ -35,7 +37,7 @@ public:
     // float throttle = _controller.getThrottle();
     // _flyHandler.onUpdate(dt, throttle);
 
-    PRINT("Satellites: %d\n", _gps.satellites.value());
+    // PRINT("Satellites: %d\n", _gps.satellites.value());
     updateData();
   }
 
@@ -59,11 +61,13 @@ public:
   }
 
   const DroneData &getDroneData() const { return _data; }
+  const Movement &getMovement() const { return _movement; }
+  void setMovement(Movement &mov) { _movement = mov; }
 
 private:
   DroneData _data;
   FlyHandler _flyHandler;
-  // Controller _controller;
+  Movement _movement;
   TinyGPSPlus _gps;
   HardwareSerial _gpsSerial;
 };

@@ -1,5 +1,4 @@
 #include "FlyHandler.h"
-
 namespace Drone {
 
 void FlyHandler::init() {
@@ -29,7 +28,7 @@ void FlyHandler::beginRead() {
   Wire.requestFrom(_address, (uint8_t)14, (uint8_t)true);
 }
 
-void FlyHandler::onUpdate(DeltaTime dt, int throttle) {
+void FlyHandler::onUpdate(DeltaTime dt, Movement &mov) {
   IMUData imu = readIMU();
 
   float roll_acc = atan2(imu.acc.y, imu.acc.z) * RAD_TO_DEG;
@@ -39,15 +38,17 @@ void FlyHandler::onUpdate(DeltaTime dt, int throttle) {
   _pitch = _alpha * (_pitch + imu.gyro.y * dt) + (1 - _alpha) * pitch_acc;
 
   // PID calcula corrección
-  float rollOut = pidRoll.compute(0, _roll, dt);  // setpoint = 0 (nivelado)
-  float pitchOut = pidPitch.compute(0, _pitch, dt);
+  float rollOut = pidRoll.compute(mov.roll * 0.15f, _roll, dt);  // escalar a grados el roll y pitch
+  float pitchOut = pidPitch.compute(mov.pitch * 0.15f, _pitch, dt);
 
   // Mezcla de motores (quadcopter +)
   //        FL         FR          BL          BR
-  int fl = throttle + rollOut - pitchOut;  // - roll, - pitch
-  int fr = throttle - rollOut - pitchOut;  // + roll, - pitch
-  int bl = throttle + rollOut + pitchOut;  // - roll, + pitch
-  int br = throttle - rollOut + pitchOut;  // + roll, + pitch
+  int fl = mov.throttle + rollOut - pitchOut;  // - roll, - pitch
+  int fr = mov.throttle - rollOut - pitchOut;  // + roll, - pitch
+  int bl = mov.throttle + rollOut + pitchOut;  // - roll, + pitch
+  int br = mov.throttle - rollOut + pitchOut;  // + roll, + pitch
+
+  PRINT("Potencia: motor FL: %d, motor FR: %d, motor BL: %d, motor BR: %d\n", fl, fr, bl, br);
 
   motorFL.setSpeed(constrain(fl, 0, 255));
   motorFR.setSpeed(constrain(fr, 0, 255));

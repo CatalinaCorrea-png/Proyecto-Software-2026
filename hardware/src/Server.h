@@ -8,6 +8,9 @@
 #include "Drone.h"
 namespace Drone {
 
+#define UDP_PORT 4210
+#define UDP_TX_PORT 4211
+
 class Server {
 
 public:
@@ -20,15 +23,29 @@ public:
 
   inline void handleClient() { webServer.handleClient(); }
   void init();
+
+  void handleUDP();
   void handleStream();
   void handleDroneData();
+
   void serveJpg();
   void handleJpgLo();
   void handleJpgHi();
   void handleJpgMid();
 
 private:
+  void sendTelemetry();
+
   Drone *_drone;
+
+  WiFiUDP udp;
+  IPAddress remoteIP;
+  uint16_t remotePort;
+
+  int16_t throttle = 0;
+  int16_t yaw = 0;
+  int16_t pitch = 0;
+  int16_t roll = 0;
 };
 
 }  // namespace Drone

@@ -7,6 +7,7 @@ class Motor {
 
 public:
   Motor() = default;
+  Motor(int pwmPin, int pwmChannel) : _pwmPin(pwmPin), _pwmChannel(pwmChannel) {};
 
   void init(int pwmPin, int pwmChannel);
   void onUpdate();

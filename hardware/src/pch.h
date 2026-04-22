@@ -1,13 +1,14 @@
 #pragma once
 
 #include <Arduino.h>
+#include <stdint.h>
 
 #define DEBUG  // comment this define to disable prints
 
 #ifdef DEBUG
   #define PRINT(...) Serial.printf(__VA_ARGS__)
 #else
-  #define PRINT()
+  #define PRINT(...)
 #endif
 
 #define MOTOR_PIN1 13

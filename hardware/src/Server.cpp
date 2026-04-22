@@ -1,6 +1,6 @@
 #include "Server.h"
 #include <ArduinoJson.h>
-
+#include "Controller.h"
 namespace Drone {
 
 void Server::init() {
@@ -9,9 +9,9 @@ void Server::init() {
     using namespace esp32cam;
     Config cfg;
     cfg.setPins(pins::AiThinker);
-    cfg.setResolution(hiRes);
+    cfg.setResolution(midRes);
     cfg.setBufferCount(2);
-    cfg.setJpeg(80);
+    cfg.setJpeg(70);
 
     bool ok = Camera.begin(cfg);
     PRINT(ok ? "CAMERA OK" : "CAMERA FAIL");
@@ -38,6 +38,9 @@ void Server::init() {
   webServer.on("/status", [this]() { this->handleDroneData(); });
 
   webServer.begin();
+
+  udp.begin(UDP_PORT);
+  PRINT("UDP listening on %d\n", UDP_PORT);
 }
 
 void Server::handleStream() {
@@ -63,11 +66,53 @@ void Server::handleStream() {
     frame->writeTo(client);
     client.print("\r\n");
 
-    delay(30);  // controla FPS
+    handleUDP();
     yield();
   }
 
   client.stop();
+}
+
+void Server::handleUDP() {
+  int packetSize = udp.parsePacket();
+  if (packetSize) {
+    char incoming[128];
+
+    int len = udp.read(incoming, sizeof(incoming) - 1);
+    if (len > 0)
+      incoming[len] = 0;
+
+    // guardar origen (para responder)
+    remoteIP = udp.remoteIP();
+    remotePort = udp.remotePort();
+
+    // formato: T:1200,Y:0,P:0,R:0
+    sscanf(incoming, "T:%d,Y:%d,P:%d,R:%d", &throttle, &yaw, &pitch, &roll);
+
+    Movement mov = {throttle, pitch, roll};
+
+    _drone->setMovement(mov);
+
+    PRINT("RX UDP -> T:%d Y:%d P:%d R:%d\n", throttle, yaw, pitch, roll);
+
+    // responder telemetría
+    sendTelemetry();
+  }
+}
+
+void Server::sendTelemetry() {
+  if (remoteIP == IPAddress(0, 0, 0, 0))
+    return;
+
+  char buffer[128];
+
+  const DroneData &data = _drone->getDroneData();
+
+  sprintf(buffer, "LAT:%.6f,LNG:%.6f,ALT:%.2f", data.lat, data.lng, data.altitude);
+
+  udp.beginPacket(remoteIP, UDP_TX_PORT);
+  udp.write((uint8_t *)buffer, strlen(buffer));
+  udp.endPacket();
 }
 
 void Server::handleDroneData() {
@@ -77,6 +122,7 @@ void Server::handleDroneData() {
   doc["lat"] = data.lat;
   doc["lng"] = data.lng;
   doc["altitude"] = data.altitude;
+  doc["speed"] = data.speed;
   // doc["battery"] = data.battery;
 
   String json;
