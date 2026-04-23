@@ -20,9 +20,11 @@ void Server::init() {
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
   }
+
   PRINT("http://");
   PRINT("IP: %s\n", WiFi.localIP().toString().c_str());
   PRINT("  /cam-lo.jpg");
