@@ -16,8 +16,8 @@
 #define MOTOR_PIN3 15
 #define MOTOR_PIN4 2
 
-#define MPU_SDA
-#define MPU_SLC
+#define MPU_SDA_PIN = 21
+#define MPU_SCL_PIN = 22
 
-#define MPU_SDA_PIN = 21;
-#define MPU_SCL_PIN = 22;
+#define UDP_PORT 4210
+#define UDP_TX_PORT 4211

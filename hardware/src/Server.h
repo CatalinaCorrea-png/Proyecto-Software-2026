@@ -6,10 +6,8 @@
 #include <WebServer.h>
 #include "pch.h"
 #include "Drone.h"
+#include "Timer.h"
 namespace Drone {
-
-#define UDP_PORT 4210
-#define UDP_TX_PORT 4211
 
 class Server {
 
@@ -25,6 +23,7 @@ public:
   void init();
 
   void handleUDP();
+  void sendPeriodicTelemetry();
   void handleStream();
   void handleDroneData();
 
@@ -38,14 +37,16 @@ private:
 
   Drone *_drone;
 
-  WiFiUDP udp;
-  IPAddress remoteIP;
-  uint16_t remotePort;
+  WiFiUDP _udp;
+  IPAddress _remoteIP;
+  uint16_t _remotePort;
 
-  int16_t throttle = 0;
-  int16_t yaw = 0;
-  int16_t pitch = 0;
-  int16_t roll = 0;
+  Timer _telemetryTimer{200};  // push telemetría cada 200ms (5Hz)
+
+  int16_t _throttle = 0;
+  int16_t _yaw = 0;
+  int16_t _pitch = 0;
+  int16_t _roll = 0;
 };
 
 }  // namespace Drone

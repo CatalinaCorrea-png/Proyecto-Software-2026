@@ -39,7 +39,7 @@ void Server::init() {
 
   webServer.begin();
 
-  udp.begin(UDP_PORT);
+  _udp.begin(UDP_PORT);
   PRINT("UDP listening on %d\n", UDP_PORT);
 }
 
@@ -73,27 +73,35 @@ void Server::handleStream() {
   client.stop();
 }
 
+void Server::sendPeriodicTelemetry() {
+  if (_remoteIP == IPAddress(0, 0, 0, 0))
+    return;
+  if (!_telemetryTimer.tick())
+    return;
+  sendTelemetry();
+}
+
 void Server::handleUDP() {
-  int packetSize = udp.parsePacket();
+  int packetSize = _udp.parsePacket();
   if (packetSize) {
     char incoming[128];
 
-    int len = udp.read(incoming, sizeof(incoming) - 1);
+    int len = _udp.read(incoming, sizeof(incoming) - 1);
     if (len > 0)
       incoming[len] = 0;
 
     // guardar origen (para responder)
-    remoteIP = udp.remoteIP();
-    remotePort = udp.remotePort();
+    _remoteIP = _udp.remoteIP();
+    _remotePort = _udp.remotePort();
 
     // formato: T:1200,Y:0,P:0,R:0
-    sscanf(incoming, "T:%d,Y:%d,P:%d,R:%d", &throttle, &yaw, &pitch, &roll);
+    sscanf(incoming, "T:%d,Y:%d,P:%d,R:%d", &_throttle, &_yaw, &_pitch, &_roll);
 
-    Movement mov = {throttle, pitch, roll};
+    Movement mov = {_throttle, _pitch, _roll};
 
     _drone->setMovement(mov);
 
-    PRINT("RX UDP -> T:%d Y:%d P:%d R:%d\n", throttle, yaw, pitch, roll);
+    PRINT("RX UDP -> T:%d Y:%d P:%d R:%d\n", _throttle, _yaw, _pitch, _roll);
 
     // responder telemetría
     sendTelemetry();
@@ -101,7 +109,7 @@ void Server::handleUDP() {
 }
 
 void Server::sendTelemetry() {
-  if (remoteIP == IPAddress(0, 0, 0, 0))
+  if (_remoteIP == IPAddress(0, 0, 0, 0))
     return;
 
   char buffer[128];
@@ -110,9 +118,9 @@ void Server::sendTelemetry() {
 
   sprintf(buffer, "LAT:%.6f,LNG:%.6f,ALT:%.2f", data.lat, data.lng, data.altitude);
 
-  udp.beginPacket(remoteIP, UDP_TX_PORT);
-  udp.write((uint8_t *)buffer, strlen(buffer));
-  udp.endPacket();
+  _udp.beginPacket(_remoteIP, UDP_TX_PORT);
+  _udp.write((uint8_t *)buffer, strlen(buffer));
+  _udp.endPacket();
 }
 
 void Server::handleDroneData() {
