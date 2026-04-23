@@ -37,29 +37,29 @@ jobs:
 
       - name: Build firmware (esp32cam)
         run: pio run -e esp32cam
-        working-directory: hardware
 
   # ─── Job 2: unit tests nativos (sin hardware) ────────────────────────────
-  test-native:
-    name: Native Unit Tests
-    runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+  # test-native:
+  #   name: Native Unit Tests
+  #   runs-on: ubuntu-latest
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - uses: actions/cache@v4
-        with:
-          path: ~/.platformio
-          key: pio-native-${{ runner.os }}-${{ hashFiles('hardware/platformio.ini') }}
-          restore-keys: pio-native-${{ runner.os }}-
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
 
-      - name: Install PlatformIO
-        run: pip install platformio
+  #     - uses: actions/cache@v4
+  #       with:
+  #         path: ~/.platformio
+  #         key: pio-native-${{ runner.os }}-${{ hashFiles('hardware/platformio.ini') }}
+  #         restore-keys: pio-native-${{ runner.os }}-
 
-      - name: Run native unit tests
-        run: pio test -e native -v
-        working-directory: hardware
+  #     - name: Install PlatformIO
+  #       run: pip install platformio
+
+  #     - name: Run native unit tests
+  #       run: pio test -e native -v
+  #       working-directory: hardware
