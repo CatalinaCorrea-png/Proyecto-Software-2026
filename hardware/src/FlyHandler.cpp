@@ -37,12 +37,16 @@ void FlyHandler::onUpdate(DeltaTime dt, Movement &mov) {
   _roll = _alpha * (_roll + imu.gyro.x * dt) + (1 - _alpha) * roll_acc;
   _pitch = _alpha * (_pitch + imu.gyro.y * dt) + (1 - _alpha) * pitch_acc;
 
-  // PID calcula corrección
+  // int16_t normalizedRoll = map(mov.roll, INPUT_MIN_VALUE, INPUT_MAX_VALUE, -15, 15);
+  // int16_t normalizedPitch = map(mov.roll, INPUT_MIN_VALUE, INPUT_MAX_VALUE, -15, 15);
+
+  // PID calcula correccion
   float rollOut = pidRoll.compute(mov.roll * 0.15f, _roll, dt);  // escalar a grados el roll y pitch
   float pitchOut = pidPitch.compute(mov.pitch * 0.15f, _pitch, dt);
 
   // Mezcla de motores (quadcopter +)
   //        FL         FR          BL          BR
+  
   int fl = mov.throttle + rollOut - pitchOut;  // - roll, - pitch
   int fr = mov.throttle - rollOut - pitchOut;  // + roll, - pitch
   int bl = mov.throttle + rollOut + pitchOut;  // - roll, + pitch

@@ -1,14 +1,16 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from modules.drone.simulator import simulate_telemetry
 from modules.detection.yolo_detector import YoloDetector
 from modules.detection.thermal_detector import ThermalDetector
-from modules.detection.thermal_simulator import ThermalSimulator   # ← Simulacion de camara térmica
+from modules.detection.thermal_simulator import ThermalSimulator
 from modules.detection.fusion import fuse_detections
 from core.state import drone_state, search_grid
-# from core.config import CAMERA_SOURCE, CAMERA_INDEX
+from core.config import DRONE_IP, DRONE_UDP_PORT, DRONE_UDP_TX_PORT
 from modules.drone.camera import open_camera
-import json, cv2, numpy as np, base64, asyncio, time, uuid
+from modules.drone.udp_telemetry import start_udp_listener, hw_watchdog
+import json, cv2, numpy as np, base64, asyncio, time, uuid, socket
 
 app = FastAPI(title="AeroSearch AI")
 app.add_middleware(
@@ -27,9 +29,44 @@ grid_clients: list[WebSocket] = []
 # Variable global para trackear si ya hay una simulación corriendo
 _simulation_running = False
 
+class DroneCommand(BaseModel):
+    throttle: int = 0   # 0-255 (PWM directo al motor)
+    yaw: int = 0        # -100 a 100
+    pitch: int = 0      # -100 a 100
+    roll: int = 0       # -100 a 100
+
+_udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+_last_cmd_time: float = 0.0
+
+
+@app.on_event("startup")
+async def startup():
+    await start_udp_listener(DRONE_UDP_TX_PORT)
+    asyncio.create_task(hw_watchdog())
+    asyncio.create_task(_keepalive_loop())
+
+
+async def _keepalive_loop():
+    """Envía T:0,Y:0,P:0,R:0 al ESP32 cada 2s si no hubo comandos recientes.
+    Esto establece nuestra IP como destino para la telemetría periódica."""
+    while True:
+        await asyncio.sleep(2.0)
+        if time.time() - _last_cmd_time > 3.0:
+            try:
+                _udp_sock.sendto(b"T:0,Y:0,P:0,R:0", (DRONE_IP, DRONE_UDP_PORT))
+            except Exception:
+                pass
+
+
 @app.get("/")
 def health():
     return {"status": "AeroSearch AI online"}
+
+@app.post("/drone/control")
+def drone_control(cmd: DroneCommand):
+    payload = f"T:{cmd.throttle},Y:{cmd.yaw},P:{cmd.pitch},R:{cmd.roll}"
+    _udp_sock.sendto(payload.encode(), (DRONE_IP, DRONE_UDP_PORT))
+    return {"sent": payload, "target": f"{DRONE_IP}:{DRONE_UDP_PORT}"}
 
 # Este es el dron. Envía Telemetría GPS, batería, estado.
 @app.websocket("/ws/mission")

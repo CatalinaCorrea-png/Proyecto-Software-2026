@@ -3,6 +3,7 @@ import { SearchMap } from '../components/map/SearchMap'
 import { TelemetryPanel } from '../components/drone/TelemetryPanel'
 import { DetectionAlert } from '../components/alerts/DetectionAlert'
 import { CameraFeed } from '../components/drone/CameraFeed'
+import { DroneController } from '../components/drone/DroneController'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useMission } from '../hooks/useMission'
 import type { Detection } from '../types'
@@ -37,15 +38,14 @@ export function Dashboard() {
         trail={trail}
       />
 
-      {/* ── Panel telemetria y camara ── */}
+      {/* ── Panel telemetria, camara y control ── */}
       <div style={{
         display: 'grid',
-        gridTemplateRows: 'auto auto auto',
+        gridTemplateRows: 'auto auto auto auto',
         gap: 10,
-        alignContent: 'center',
+        alignContent: 'start',
         overflowY: 'auto',
         minHeight: 0,
-        // height: '100vh'
       }}>
 
         {/* Header */}
@@ -65,8 +65,11 @@ export function Dashboard() {
           detectionCount={mapDetections.length}
         />
 
-        {/* Cámara — sin panel de detecciones propio */}
+        {/* Cámara */}
         <CameraFeed onNewDetection={handleNewDetection} />
+
+        {/* Control de vuelo */}
+        <DroneController />
 
       </div>
 

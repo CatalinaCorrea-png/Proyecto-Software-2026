@@ -60,25 +60,29 @@ async def simulate_telemetry():
         battery = max(0, battery - 0.05)
         step += 1
 
-        drone_state.lat = lat
-        drone_state.lng = lng
+        # Si hay telemetría real del hardware, no pisamos lat/lng
+        if not drone_state.real_telemetry_active:
+            drone_state.lat = lat
+            drone_state.lng = lng
         drone_state.battery = battery
         drone_state.status = "flying"
         drone_state.last_update = time.time()
 
+        source = "hardware" if drone_state.real_telemetry_active else "sim"
         yield {
             "type": "telemetry",
             "data": {
                 "position": {
-                    "lat": lat,
-                    "lng": lng,
-                    "altitude": 25.0,
+                    "lat": drone_state.lat,
+                    "lng": drone_state.lng,
+                    "altitude": drone_state.altitude,
                     "timestamp": int(time.time() * 1000)
                 },
                 "battery": round(battery, 1),
                 "status": "flying",
                 "speed": 5.0,
-                "elapsed": elapsed
+                "elapsed": elapsed,
+                "source": source
             }
         }
 

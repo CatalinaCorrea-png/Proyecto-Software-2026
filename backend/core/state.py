@@ -17,7 +17,9 @@ class DroneState:
     battery: float = 100.0
     status: str = "idle"
     last_update: float = field(default_factory=time.time)
-    mission_start: float = field(default_factory=time.time)  # ← para tomar tiempo de la mision
+    mission_start: float = field(default_factory=time.time)
+    real_telemetry_active: bool = False
+    last_hw_telemetry: float = 0.0
 
 drone_state = DroneState()
 
