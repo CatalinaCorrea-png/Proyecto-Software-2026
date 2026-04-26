@@ -4,10 +4,7 @@ from pathlib import Path
 from ultralytics import YOLO
 import time
 
-_FINETUNED_WEIGHTS = (
-    Path(__file__).resolve().parents[3]
-    / "training" / "runs" / "phase2_full" / "weights" / "best.pt"
-)
+_FINETUNED_WEIGHTS = Path(__file__).resolve().parents[2] / "yolov8n_aerial.pt"
 _FALLBACK_WEIGHTS = Path(__file__).resolve().parents[2] / "yolov8n.pt"
 
 
