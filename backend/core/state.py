@@ -13,7 +13,7 @@ BASE_LNG = -70.0109
 class DroneState:
     lat: float = BASE_LAT
     lng: float = BASE_LNG
-    altitude: float = 25.0
+    altitude: float = 25.0 # -> altitude set
     battery: float = 100.0
     status: str = "idle"
     last_update: float = field(default_factory=time.time)
