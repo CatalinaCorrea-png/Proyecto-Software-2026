@@ -1,18 +1,28 @@
 import cv2
 import numpy as np
+from pathlib import Path
 from ultralytics import YOLO
 import time
 
+_FINETUNED_WEIGHTS = (
+    Path(__file__).resolve().parents[3]
+    / "training" / "runs" / "phase2_full" / "weights" / "best.pt"
+)
+_FALLBACK_WEIGHTS = Path(__file__).resolve().parents[2] / "yolov8n.pt"
+
+
 class YoloDetector:
     def __init__(self, model_size: str = "yolov8n"):
-        """
-        model_size opciones: yolov8n (rápido), yolov8s (balance), yolov8m (preciso)
-        La primera vez descarga el modelo automáticamente (~6MB para nano)
-        """
-        print(f"🧠 Cargando modelo {model_size}...")
-        self.model = YOLO(f"{model_size}.pt")
-        self.person_class_id = 0  # en COCO dataset, clase 0 = persona
-        print("✅ Modelo listo")
+        if _FINETUNED_WEIGHTS.exists():
+            weights = str(_FINETUNED_WEIGHTS)
+            print(f"Cargando modelo fine-tuneado: {weights}")
+        else:
+            weights = str(_FALLBACK_WEIGHTS) if _FALLBACK_WEIGHTS.exists() else f"{model_size}.pt"
+            print(f"Cargando modelo base: {weights}")
+
+        self.model = YOLO(weights)
+        self.person_class_id = 0
+        print("Modelo listo")
 
     def detect(self, frame: np.ndarray) -> list[dict]:
         """
@@ -22,7 +32,7 @@ class YoloDetector:
         results = self.model(
             frame,
             verbose=False,   # no imprimir en consola cada frame
-            conf=0.4,        # confianza mínima 40%
+            conf=0.25,       # umbral bajo: detecciones aéreas tienen scores menores
             classes=[self.person_class_id]  # solo buscar personas
         )
 
