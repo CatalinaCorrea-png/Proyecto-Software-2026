@@ -5,46 +5,45 @@ from ultralytics import YOLO
 import time
 
 _FINETUNED_WEIGHTS = Path(__file__).resolve().parents[2] / "yolov8n_aerial.pt"
-_FALLBACK_WEIGHTS = Path(__file__).resolve().parents[2] / "yolov8n.pt"
+_BASE_WEIGHTS      = Path(__file__).resolve().parents[2] / "yolov8n.pt"
+
+# Altitud (metros) a partir de la cual se usa el modelo aéreo
+AERIAL_ALTITUDE_THRESHOLD = 15.0
 
 
 class YoloDetector:
     def __init__(self, model_size: str = "yolov8n"):
+        base_path = str(_BASE_WEIGHTS) if _BASE_WEIGHTS.exists() else f"{model_size}.pt"
+        self.model_base = YOLO(base_path)
+        print(f"Modelo base cargado: {base_path}")
+
         if _FINETUNED_WEIGHTS.exists():
-            weights = str(_FINETUNED_WEIGHTS)
-            print(f"Cargando modelo fine-tuneado: {weights}")
+            self.model_aerial = YOLO(str(_FINETUNED_WEIGHTS))
+            print(f"Modelo aéreo cargado: {_FINETUNED_WEIGHTS.name}")
         else:
-            weights = str(_FALLBACK_WEIGHTS) if _FALLBACK_WEIGHTS.exists() else f"{model_size}.pt"
-            print(f"Cargando modelo base: {weights}")
+            self.model_aerial = self.model_base
+            print("Modelo aéreo no encontrado, usando base para ambos modos")
 
-        self.model = YOLO(weights)
         self.person_class_id = 0
-        print("Modelo listo")
 
-    def detect(self, frame: np.ndarray) -> list[dict]:
-        """
-        Recibe un frame (numpy array BGR de OpenCV)
-        Retorna lista de detecciones de personas
-        """
-        results = self.model(
-            frame,
-            verbose=False,   # no imprimir en consola cada frame
-            conf=0.25,       # umbral bajo: detecciones aéreas tienen scores menores
-            classes=[self.person_class_id]  # solo buscar personas
-        )
+    def detect(self, frame: np.ndarray, altitude: float = 0.0) -> list[dict]:
+        aerial = altitude >= AERIAL_ALTITUDE_THRESHOLD
+        model = self.model_aerial if aerial else self.model_base
+        conf  = 0.25 if aerial else 0.40
+
+        results = model(frame, verbose=False, conf=conf, classes=[self.person_class_id])
 
         detections = []
         for r in results:
             for box in r.boxes:
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
                 confidence = float(box.conf[0])
-
                 detections.append({
                     "bbox": {
                         "x1": int(x1), "y1": int(y1),
                         "x2": int(x2), "y2": int(y2),
-                        "cx": int((x1 + x2) / 2),  # centro X
-                        "cy": int((y1 + y2) / 2),  # centro Y
+                        "cx": int((x1 + x2) / 2),
+                        "cy": int((y1 + y2) / 2),
                     },
                     "confidence": confidence,
                     "source": "rgb",
