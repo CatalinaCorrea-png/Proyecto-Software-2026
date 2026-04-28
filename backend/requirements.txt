@@ -11,3 +11,12 @@ python-dotenv
 Pillow
 mediapipe
 python-dotenv
+
+# ── Persistence layer ───────────────────────────────────
+sqlalchemy[asyncio]     
+asyncpg                
+alembic              
+pydantic-settings
+aiofiles
+python-multipart
+ 

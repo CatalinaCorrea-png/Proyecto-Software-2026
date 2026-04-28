@@ -1,123 +1,170 @@
-# 🚀 Proyecto Software 2026
+# AeroSearch AI
 
-Aplicación web full-stack con backend en **Python** y frontend en **TypeScript/React**.
+Sistema de búsqueda y rescate con dron, detección de personas en tiempo real con YOLOv8 y visualización en mapa.
 
 ---
 
-## 📋 Requisitos previos
+## Requisitos previos
 
-Antes de comenzar, asegurate de tener instalado:
-
-- [Python 3.10+](https://www.python.org/downloads/)
+- [Python 3.11+](https://www.python.org/downloads/)
 - [Node.js 18+](https://nodejs.org/)
-- [Git](https://git-scm.com/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (para PostgreSQL)
 
 ---
 
-## 📥 Clonar el repositorio
+## 1. Base de datos — PostgreSQL con Docker
+
+Asegurate de tener Docker Desktop abierto y corriendo, luego ejecutá:
 
 ```bash
-git clone https://github.com/CatalinaCorrea-png/Proyecto-Software-2026.git
-cd Proyecto-Software-2026
+docker run -d \
+  --name aerosearch-db \
+  -e POSTGRES_USER=aerosearch \
+  -e POSTGRES_PASSWORD=aerosearch \
+  -e POSTGRES_DB=aerosearch \
+  -p 5432:5432 \
+  postgres:16
+```
+
+> **Windows (Git Bash / CMD):** si el comando con `\` falla, usá una sola línea:
+> ```bash
+> docker run -d --name aerosearch-db -e POSTGRES_USER=aerosearch -e POSTGRES_PASSWORD=aerosearch -e POSTGRES_DB=aerosearch -p 5432:5432 postgres:16
+> ```
+
+Para verificar que el contenedor está corriendo:
+
+```bash
+docker ps
+```
+
+Para detenerlo / reiniciarlo en el futuro:
+
+```bash
+docker stop aerosearch-db
+docker start aerosearch-db
 ```
 
 ---
 
-## ⚙️ Backend (Python)
+## 2. Backend — FastAPI
 
-### 1. Moverse a la carpeta del backend
+### 2.1 Crear el archivo `.env`
+
+Dentro de la carpeta `backend/`, creá un archivo llamado `.env` con el siguiente contenido:
+
+```env
+DATABASE_URL=postgresql+asyncpg://aerosearch:aerosearch@localhost:5432/aerosearch
+DB_ECHO=False
+
+STORAGE_BACKEND=local
+IMAGES_LOCAL_ROOT=media/detections
+
+CAMERA_SOURCE=webcam
+ESP32_STREAM_URL=http://192.168.1.1:81/stream
+```
+
+> El archivo `.env` **no se sube al repositorio** (está en `.gitignore`). Cada desarrollador crea el suyo localmente.
+
+Valores para `CAMERA_SOURCE`:
+
+| Valor | Descripción |
+|-------|-------------|
+| `webcam` | Cámara integrada del equipo (índice 0) |
+| `webcam_1` | Segunda cámara (índice 1) |
+| `camo` | App Camo como cámara virtual |
+| `esp32` | Stream MJPEG del ESP32-CAM |
+| `synthetic` | Sin cámara — genera frames de prueba |
+
+### 2.2 Instalar dependencias
 
 ```bash
 cd backend
-```
-
-### 2. Crear y activar un entorno virtual (PowerShell)
-
-```bash
-# Crear el entorno virtual
-python -m venv venv
-
-# Activar en Linux/macOS
-source venv/bin/activate
-
-# Activar en Windows (PowerShell)
-.\venv\Scripts\Activate.ps1
-
-# Activar en Windows (CMD)
-venv\Scripts\activate.bat
-```
-
-### 3. Instalar dependencias
-
-```bash
 pip install -r requirements.txt
 ```
-### 4. Levantar el servidor backend
+
+### 2.3 Levantar el servidor
 
 ```bash
-uvicorn main:app --reload
+uvicorn main:app --reload --port 8000
 ```
 
-> El backend estará disponible en `http://localhost:8000`
+Al arrancar por primera vez se crean automáticamente las tablas en PostgreSQL.
+
+Verificá que esté corriendo en: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-## 🖥️ Frontend (TypeScript / React)
-
-### 1. Abrí una nueva terminal y moverse a la carpeta del frontend
+## 3. Frontend — React + Vite
 
 ```bash
 cd frontend
-```
-
-### 2. Instalar dependencias
-
-```bash
 pnpm install
-```
-### 3. Levantar el servidor de desarrollo
-
-```bash
 pnpm run dev
 ```
 
-> El frontend estará disponible en `http://localhost:5173`
+La app queda disponible en: [http://localhost:5173](http://localhost:5173)
 
 ---
 
-## 🗂️ Estructura del proyecto
+## 4. Estructura del proyecto
 
 ```
 Proyecto-Software-2026/
-├── backend/          # API en Python (FastAPI)
+├── backend/
+│   ├── main.py                  # Entry point FastAPI
+│   ├── .env                     # Variables de entorno (no commitear)
 │   ├── requirements.txt
-│   └── ...
-├── frontend/         # Interfaz en TypeScript/React
-│   ├── package.json
-│   └── ...
-└── README.md
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   └── state.py             # Estado global del dron y grilla
+│   ├── persistence/
+│   │   ├── models.py            # Modelos SQLAlchemy
+│   │   ├── schemas.py           # DTOs Pydantic
+│   │   ├── routers/             # Endpoints REST
+│   │   ├── repositories/        # Acceso a DB
+│   │   └── services/            # Lógica de negocio
+│   └── modules/
+│       ├── detection/           # YOLO, térmica, fusión
+│       └── drone/               # Simulador, cámara
+└── frontend/
+    └── src/
+        ├── pages/
+        │   ├── Dashboard.tsx        # Vista principal en tiempo real
+        │   └── DetectionsHistory.tsx # Historial de detecciones
+        ├── components/
+        ├── hooks/
+        └── types.ts
 ```
 
 ---
 
-## 🐛 Solución de problemas comunes
+## 5. API — endpoints principales
 
-| Problema | Solución |
-|---|---|
-| `ModuleNotFoundError` en Python | Asegurate de tener el entorno virtual activado y haber ejecutado `pip install -r requirements.txt` |
-| `npm: command not found` | Instalá [Node.js](https://nodejs.org/) y verificá con `node -v` |
-| Error de CORS | Verificá que la URL del backend en el `.env` del frontend sea correcta |
-| Puerto en uso | Cambiá el puerto: `uvicorn main:app --port 8001` o `npm run dev -- --port 3001` |
-
----
-
-## 🤝 Proyecto desarrollado en equipo
-
-- Catalina Correa
-- Nicolas Cernadas
-- Dana Cossettini Reyes
-- Maximiliano Andres Bianchimano
-- Fernanda Perez
-- Martin Schubert
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/docs` | Swagger UI interactivo |
+| `POST` | `/api/missions` | Crear una misión |
+| `GET` | `/api/missions` | Listar misiones |
+| `GET` | `/api/detections` | Listar detecciones (con filtros) |
+| `GET` | `/api/detections/{id}` | Detección con imágenes |
+| `GET` | `/api/images/file/{path}` | Servir imagen local |
+| `WS` | `/ws/mission` | Telemetría del dron |
+| `WS` | `/ws/detection` | Stream de video + detecciones IA |
+| `WS` | `/ws/grid` | Grilla de cobertura |
 
 ---
+
+## 6. Problemas comunes
+
+**`failed to connect to the docker API`**
+→ Docker Desktop no está corriendo. Abrilo desde el menú de inicio y esperá que el ícono de la ballena deje de parpadear.
+
+**`pydantic.errors.PydanticUserError: A non-annotated attribute`**
+→ Asegurate de que `CAMERA_SOURCE` esté fuera de la clase `Settings` en `core/config.py`.
+
+**El contenedor ya existe (`Conflict`)**
+→ Ya corriste el `docker run` antes. Solo hacé `docker start aerosearch-db`.
+
+**Puerto 5432 ocupado**
+→ Tenés PostgreSQL instalado localmente. Detené ese servicio o cambiá el puerto en el `docker run` a `-p 5433:5432` y actualizá el `DATABASE_URL` en `.env` a `...@localhost:5433/...`.
