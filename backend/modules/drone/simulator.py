@@ -12,7 +12,9 @@ async def simulate_telemetry():
     spc = SECONDS_PER_CELL
     cols = search_grid.cols
 
-    steps_horizontal = cols * spc
+    # Barrido horizontal: de centro-de-col-0 a centro-de-col-(cols-1) => (cols-1) celdas
+    # Tramo vertical: 1 celda hacia arriba (al centro de la fila siguiente)
+    steps_horizontal = (cols - 1) * spc
     steps_vertical = spc
     steps_per_cycle = steps_horizontal + steps_vertical
 
