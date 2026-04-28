@@ -20,7 +20,7 @@ class YoloDetector:
         Retorna lista de detecciones de personas
         """
         results = self.model(
-            frame,
+            source=frame,
             verbose=False,   # no imprimir en consola cada frame
             conf=0.4,        # confianza mínima 40%
             classes=[self.person_class_id]  # solo buscar personas

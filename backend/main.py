@@ -16,11 +16,14 @@ app.add_middleware(
     allow_methods=["*"], allow_headers=["*"],
 )
 
+# Detector de objetos RGB (YOLOv8n), detector térmico (+ simulacion)
 yolo = YoloDetector(model_size="yolov8n")
 thermal = ThermalDetector()
 thermal_sim = ThermalSimulator()          # ← Simulacion de camara térmica
+# Variables para cooldown de detecciones
 last_detection_time = 0.0
 DETECTION_COOLDOWN = 3.0
+# Lista de clientes WebSocket conectados a la grilla para enviar actualizaciones en tiempo real
 grid_clients: list[WebSocket] = []
 
 # Variable global para trackear si ya hay una simulación corriendo
