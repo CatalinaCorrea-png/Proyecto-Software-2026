@@ -1,5 +1,6 @@
 import math
 import time
+from core.state import BASE_LAT
 
 # 20 metros en grados decimales (aproximado, válido para latitudes medias)
 CELL_SIZE_METERS = 20
@@ -7,8 +8,9 @@ METERS_PER_LAT_DEGREE = 111_000
  # ajustado para Buenos Aires
 # METERS_PER_LNG_DEGREE = 111_000 * math.cos(math.radians(-34.6)) 
 # dinámico según la latitud real
-METERS_PER_LNG_DEGREE = 111_000 * math.cos(math.radians(-32.6))  # Aconcagua
+# METERS_PER_LNG_DEGREE = 111_000 * math.cos(math.radians(-32.6))  # Aconcagua
 
+METERS_PER_LNG_DEGREE = 111_000 * math.cos(math.radians(BASE_LAT))
 CELL_LAT = CELL_SIZE_METERS / METERS_PER_LAT_DEGREE
 CELL_LNG = CELL_SIZE_METERS / METERS_PER_LNG_DEGREE
 

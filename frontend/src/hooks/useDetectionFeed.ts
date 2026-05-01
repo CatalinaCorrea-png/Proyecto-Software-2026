@@ -32,15 +32,26 @@ export function useDetectionFeed(url: string): UseDetectionFeedReturn {
   const [detections, setDetections] = useState<Detection[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    const connect = () => {
+    function connect() {
+      // Limpia conexión anterior (StrictMode monta → desmonta → monta)
+      if (wsRef.current) {
+        wsRef.current.onclose = null
+        wsRef.current.close()
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
+
       const ws = new WebSocket(url)
 
       ws.onopen = () => setIsConnected(true)
       ws.onclose = () => {
         setIsConnected(false)
-        setTimeout(connect, 2000) // se llama a sí misma recursivamente 
+        reconnectTimerRef.current = setTimeout(connect, 2000)
       }
 
       ws.onmessage = (event) => {
@@ -60,7 +71,16 @@ export function useDetectionFeed(url: string): UseDetectionFeedReturn {
     }
 
     connect()
-    return () => wsRef.current?.close()
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.onclose = null
+        wsRef.current.close()
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
+    }
   }, [url])
 
   return { framePayload, detections, isConnected }

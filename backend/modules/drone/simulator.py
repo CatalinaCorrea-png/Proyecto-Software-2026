@@ -1,16 +1,26 @@
 import asyncio
 import time
-from core.state import drone_state, BASE_LAT, BASE_LNG
+from core.state import drone_state, BASE_LAT, BASE_LNG, search_grid
+from modules.mapping.grid import CELL_LAT, CELL_LNG, CELL_SIZE_METERS
 
-# Simula un dron que vuela en zigzag sobre una grilla de 20x20 celdas, enviando telemetría cada segundo.
-# Es un generador asincrono que se puede usar en el websocket de misión para enviar datos de posición y batería.
+DRONE_SPEED_MPS = 5.0
+SECONDS_PER_CELL = int(CELL_SIZE_METERS / DRONE_SPEED_MPS)
+
 async def simulate_telemetry():
     step = 0
     battery = 100.0
+    spc = SECONDS_PER_CELL
+    cols = search_grid.cols
+
+    # Barrido horizontal: de centro-de-col-0 a centro-de-col-(cols-1) => (cols-1) celdas
+    # Tramo vertical: 1 celda hacia arriba (al centro de la fila siguiente)
+    steps_horizontal = (cols - 1) * spc
+    steps_vertical = spc
+    steps_per_cycle = steps_horizontal + steps_vertical
 
     while True:
         elapsed = int(time.time() - drone_state.mission_start)
-        # ── Si la batería llegó a 0, detener la misión ───────────────────
+
         if battery <= 0:
             yield {
                 "type": "telemetry",
@@ -24,18 +34,29 @@ async def simulate_telemetry():
                     "battery": 0.0,
                     "status": "landed",
                     "speed": 0.0,
-                    "elapsed": elapsed   # ← segundos desde inicio
+                    "elapsed": elapsed
                 }
             }
-            return  # ← termina el generador, no sigue volando
+            return
 
-        row = step // 20
-        col = step % 20
-        if row % 2 == 1:
-            col = 19 - col
+        row = step // steps_per_cycle
+        pos_in_cycle = step % steps_per_cycle
 
-        lat = BASE_LAT + (row * 0.0002)
-        lng = BASE_LNG + (col * 0.0003)
+        if pos_in_cycle < steps_horizontal:
+            frac = pos_in_cycle / spc
+            lat = BASE_LAT + (row + 0.5) * CELL_LAT
+            if row % 2 == 0:
+                lng = BASE_LNG + (0.5 + frac) * CELL_LNG
+            else:
+                lng = BASE_LNG + (cols - 0.5 - frac) * CELL_LNG
+        else:
+            v_frac = (pos_in_cycle - steps_horizontal + 1) / spc
+            lat = BASE_LAT + (row + 0.5 + v_frac) * CELL_LAT
+            if row % 2 == 0:
+                lng = BASE_LNG + (cols - 0.5) * CELL_LNG
+            else:
+                lng = BASE_LNG + 0.5 * CELL_LNG
+
         battery = max(0, battery - 0.05)
         step += 1
 
@@ -57,8 +78,7 @@ async def simulate_telemetry():
                 "battery": round(battery, 1),
                 "status": "flying",
                 "speed": 5.0,
-                "elapsed": elapsed   # ← segundos desde inicio
-
+                "elapsed": elapsed
             }
         }
 

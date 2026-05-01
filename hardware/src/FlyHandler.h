@@ -1,8 +1,13 @@
 #pragma once
+
 #include <Arduino.h>
 #include <Wire.h>
 #include "Math.h"
 #include "DeltaTime.h"
+#include "Motor.h"
+#include "PID.h"
+#include "Controller.h"
+#include "pch.h"
 
 namespace Drone {
 
@@ -13,9 +18,21 @@ struct IMUData {
 
 class FlyHandler {
 public:
+  Motor motorFL;
+  Motor motorFR;
+  Motor motorBL;
+  Motor motorBR;
+
+  PID pidRoll{1.2f, 0.01f, 0.4f};
+  PID pidPitch{1.2f, 0.01f, 0.4f};
+
+  FlyHandler() = default;
+
   void init();
+  void initIMU();
+  void initGPS();
   void beginRead();
-  void onUpdate(DeltaTime dt);
+  void onUpdate(DeltaTime dt, Movement &mov);
   IMUData readIMU();
 
   float getRoll() { return _roll; };

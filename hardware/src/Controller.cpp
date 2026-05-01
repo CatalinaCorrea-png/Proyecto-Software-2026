@@ -1,36 +1,41 @@
 #include "Controller.h"
-#include "MotorHandler.h"
 
 namespace Drone {
 
-void Controller::init() {
-  BP32.setup([this](GamepadPtr gp) { this->onConnectedGamepad(gp); },
-             [this](GamepadPtr gp) { this->onDisconnectedGamepad(gp); });
+// void Controller::init() {
+//   BP32.setup([this](GamepadPtr gp) { this->onConnectedGamepad(gp); },
+//              [this](GamepadPtr gp) { this->onDisconnectedGamepad(gp); });
 
-  BP32.forgetBluetoothKeys();
-}
+//   BP32.forgetBluetoothKeys();
+// }
 
-void Controller::onUpdate(bool updated) {
-  if (updated && _gamepad && _gamepad->isConnected()) {
-    int ly = _gamepad->axisY();
-    int ry = _gamepad->axisRY();
+// void Controller::onUpdate(bool updated) {
+//   if (_gamepad && _gamepad->isConnected()) {
+//     int ly = _gamepad->axisY();  // -512 arriba, +512 abajo
 
-    int speed = (ly < -DEAD_ZONE) ? constrain(map(-ly, DEAD_ZONE, 512, 0, 255), 0, 255) : 0;
+//     if (ly < -DEAD_ZONE) {
+//       // stick arriba → sube throttle gradualmente
+//       int delta = map(-ly, DEAD_ZONE, 512, 1, 5);
+//       _throttle = constrain(_throttle + delta, 0, 255);
+//     } else if (ly > DEAD_ZONE) {
+//       // stick abajo → baja throttle gradualmente
+//       int delta = map(ly, DEAD_ZONE, 512, 1, 5);
+//       _throttle = constrain(_throttle - delta, 0, 255);
+//     }
 
-    MotorHandler::setSpeed(speed);
+//     PRINT("Left Stick Y: %d\n", ly);
+//     // stick en zona muerta → _throttle no cambia, mantiene altura
+//   }
+// }
 
-    Serial.printf("LY: %4d → Motor1: %3d", ly, speed);
-  }
-}
+// void Controller::onConnectedGamepad(GamepadPtr gp) {
+//   PRINT("Joystick conectado!");
+//   _gamepad = gp;
+// }
 
-void Controller::onConnectedGamepad(GamepadPtr gp) {
-  Serial.println("Joystick conectado!");
-  _gamepad = gp;
-}
-
-void Controller::onDisconnectedGamepad(GamepadPtr gp) {
-  Serial.println("Joystick desconectado");
-  _gamepad = nullptr;
-}
+// void Controller::onDisconnectedGamepad(GamepadPtr gp) {
+//   PRINT("Joystick desconectado");
+//   _gamepad = nullptr;
+// }
 
 }  // namespace Drone

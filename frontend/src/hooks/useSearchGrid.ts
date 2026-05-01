@@ -20,17 +20,28 @@ export function useSearchGrid(url: string): UseSearchGridReturn {
   const [coverage, setCoverage] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Mapa para actualizaciones rápidas sin recorrer el array
   const cellMapRef = useRef<Map<string, GridCell>>(new Map())
 
   useEffect(() => {
-    const connect = () => {
+    function connect() {
+      // Limpia conexión anterior (StrictMode monta → desmonta → monta)
+      if (wsRef.current) {
+        wsRef.current.onclose = null
+        wsRef.current.close()
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
+
       const ws = new WebSocket(url)
 
       ws.onopen = () => setIsConnected(true)
       ws.onclose = () => {
         setIsConnected(false)
-        setTimeout(connect, 2000)
+        reconnectTimerRef.current = setTimeout(connect, 2000)
       }
 
       ws.onmessage = (event) => {
@@ -61,7 +72,16 @@ export function useSearchGrid(url: string): UseSearchGridReturn {
     }
 
     connect()
-    return () => wsRef.current?.close()
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.onclose = null
+        wsRef.current.close()
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
+    }
   }, [url])
 
   return { cells, coverage, isConnected }

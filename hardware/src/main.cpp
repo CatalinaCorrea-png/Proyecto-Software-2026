@@ -4,13 +4,12 @@
 #include "Server.h"
 #include "DeltaTime.h"
 #include "FlyHandler.h"
-#include "MotorHandler.h"
-#include "secrets.h"
+#include "Timer.h"
+#include "Drone.h"
 
-Drone::Controller controller;
-Drone::Server server;
-Drone::FlyHandler flyHandler;
-Drone::MotorHandler motor;
+// Drone::Controller controller;
+Drone::Drone drone;
+Drone::Server server(&drone);
 
 DeltaTime dt;
 
@@ -20,26 +19,40 @@ void setup() {
   Serial.begin(115200);
   server.init();
   // controller.init();
-  // flyHandler.init();
-  // motor.init();
+  drone.init();
 }
 
-void loop() {
-  // uint32_t time = millis();
-  // dt = time - lastTime;
-  // lastTime = time;
+Timer pidTimer(50);  // cada 5ms = 200Hz (200x por seg)
+Timer ctrlTimer(5);  // cada 50ms = 20Hz (20x por seg)
 
+void loop() {
   server.handleClient();
+  server.handleUDP();
+  server.sendPeriodicTelemetry();
+
+  drone.onUpdate(dt);
+
+  /*
+  --- Implementacion vieja falta implementacion de controller para ver si deprecar
+
 
   // bool updated = controller.getUpdated();
 
-  // static unsigned long last = 0;
+  {
+    // Timed secuences
 
-  // if (millis() - last > 50) {
-  //   last = millis();
+    if (ctrlTimer.tick())
 
-  //   controller.onUpdate(updated);
-  //   motor.onUpdate();
-  //   flyHandler.onUpdate(dt);
-  // }
+      controller.onUpdate(updated);
+
+      if (pidTimer.tick()) {
+        uint32_t time = millis();
+        dt = time - lastTime;
+        lastTime = time;
+
+        int throttle = controller.getThrottle();
+        flyHandler.onUpdate(dt, throttle);
+      }
+  }
+  */
 }

@@ -21,14 +21,17 @@ class DroneState:
 
 drone_state = DroneState()
 
-from modules.mapping.grid import SearchGrid
+from modules.mapping.grid import SearchGrid, CELL_LAT, CELL_LNG
+
+GRID_COLS = 20
+GRID_ROWS = 22
 
 # Centrar la grilla donde arranca el simulador
 # El simulador hace 20 filas x 20 cols desde BASE_LAT/LNG hacia abajo-derecha
 # Entonces centramos la grilla en el punto medio del recorrido
 search_grid = SearchGrid(
-    center_lat=BASE_LAT + (10 * 0.0002),   # mitad de 20 filas
-    center_lng=BASE_LNG + (10 * 0.0003),   # mitad de 20 cols
-    rows=22,
-    cols=22
+    center_lat=BASE_LAT + (GRID_ROWS / 2) * CELL_LAT,   # centro de las rows
+    center_lng=BASE_LNG + (GRID_COLS / 2) * CELL_LNG,   # centro de las cols
+    rows=GRID_ROWS,
+    cols=GRID_COLS
 )
