@@ -6,8 +6,8 @@ from modules.detection.thermal_detector import ThermalDetector
 from modules.detection.thermal_simulator import ThermalSimulator   # ← Simulacion de camara térmica
 from modules.detection.fusion import fuse_detections
 from core.state import drone_state, search_grid
-# from core.config import CAMERA_SOURCE, CAMERA_INDEX
-from modules.drone.camera import open_camera
+from core.config import CAMERA_SOURCE, CAMERA_INDEX
+# from modules.drone.camera import open_camera # se usa el FrameGrabber ahora
 import json, cv2, numpy as np, base64, asyncio, time, uuid, threading, requests
 
 app = FastAPI(title="AeroSearch AI")
