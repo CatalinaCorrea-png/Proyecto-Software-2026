@@ -177,6 +177,11 @@ def health():
 
 @app.post("/drone/control")
 def drone_control(cmd: DroneCommand):
+    global _last_cmd_time
+    _last_cmd_time = time.time()
+    drone_state.cmd_throttle = cmd.throttle
+    drone_state.cmd_pitch = cmd.pitch
+    drone_state.cmd_roll = cmd.roll
     payload = f"T:{cmd.throttle},Y:{cmd.yaw},P:{cmd.pitch},R:{cmd.roll}"
     _udp_sock.sendto(payload.encode(), (DRONE_IP, DRONE_UDP_PORT))
     return {"sent": payload, "target": f"{DRONE_IP}:{DRONE_UDP_PORT}"}

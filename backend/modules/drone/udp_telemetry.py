@@ -12,8 +12,12 @@ class _Protocol(asyncio.DatagramProtocol):
         m = _PATTERN.search(data.decode(errors='ignore'))
         if not m:
             return
-        drone_state.lat = float(m.group(1))
-        drone_state.lng = float(m.group(2))
+        lat = float(m.group(1))
+        lng = float(m.group(2))
+        if lat == 0.0 and lng == 0.0:
+            return
+        drone_state.lat = lat
+        drone_state.lng = lng
         drone_state.altitude = float(m.group(3))
         drone_state.last_hw_telemetry = time.time()
         if not drone_state.real_telemetry_active:
