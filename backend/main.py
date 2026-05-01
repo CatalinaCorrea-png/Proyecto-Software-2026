@@ -279,6 +279,7 @@ async def detection_websocket(websocket: WebSocket):
     frame_w = grabber.frame_w
     frame_h = grabber.frame_h
     last_frame = None
+    detected_positions: set[tuple[float, float]] = set()
 
     # Actualizar simulador con dimensiones reales
     # thermal_sim.frame_w = frame_w
@@ -330,10 +331,13 @@ async def detection_websocket(websocket: WebSocket):
 
                 conf = det["confidence"]
                 conf_label = "high" if conf > 0.7 else "medium" if conf > 0.4 else "low"
+                pos_key = (round(drone_state.lat, 5), round(drone_state.lng, 5))
                 now = time.time()
                 if conf_label in ("high", "medium") and \
-                   (now - last_detection_time) >= DETECTION_COOLDOWN:
+                   (now - last_detection_time) >= DETECTION_COOLDOWN and \
+                   pos_key not in detected_positions:
                     last_detection_time = now
+                    detected_positions.add(pos_key)
 
                     detection_cell = search_grid.mark_detection(drone_state.lat, drone_state.lng)
                     if detection_cell and grid_clients:
