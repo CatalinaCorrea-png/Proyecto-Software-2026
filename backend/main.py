@@ -67,34 +67,6 @@ async def _keepalive_loop():
                 pass
 
 
-class DroneCommand(BaseModel):
-    throttle: int = 0   # 0-255 (PWM directo al motor)
-    yaw: int = 0        # -100 a 100
-    pitch: int = 0      # -100 a 100
-    roll: int = 0       # -100 a 100
-
-_udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-_last_cmd_time: float = 0.0
-
-
-@app.on_event("startup")
-async def startup():
-    await start_udp_listener(DRONE_UDP_TX_PORT)
-    asyncio.create_task(hw_watchdog())
-    asyncio.create_task(_keepalive_loop())
-
-
-async def _keepalive_loop():
-    """Envía T:0,Y:0,P:0,R:0 al ESP32 cada 2s si no hubo comandos recientes.
-    Esto establece nuestra IP como destino para la telemetría periódica."""
-    while True:
-        await asyncio.sleep(2.0)
-        if time.time() - _last_cmd_time > 3.0:
-            try:
-                _udp_sock.sendto(b"T:0,Y:0,P:0,R:0", (DRONE_IP, DRONE_UDP_PORT))
-            except Exception:
-                pass
-
 class FrameGrabber:
     """Lee frames en un hilo dedicado. Usa requests para MJPEG (ESP32) y cv2 para cámaras locales."""
     def __init__(self):
