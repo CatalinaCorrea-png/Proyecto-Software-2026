@@ -37,7 +37,7 @@ export function TelemetryPanel({ telemetry, isConnected, detectionCount }: Props
       color: 'white',
       fontFamily: 'monospace'
     }}>
-      {/* Conexión */}
+      {/* Conexión + fuente de datos */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <div style={{
           width: 10, height: 10, borderRadius: '50%',
@@ -46,6 +46,16 @@ export function TelemetryPanel({ telemetry, isConnected, detectionCount }: Props
         }} />
         <span style={{ fontSize: 12, color: '#78909C' }}>
           {isConnected ? 'CONECTADO' : 'DESCONECTADO'}
+        </span>
+        <span style={{
+          marginLeft: 'auto',
+          fontSize: 9, fontWeight: 'bold', letterSpacing: 1,
+          padding: '2px 6px', borderRadius: 3,
+          background: telemetry?.source === 'hardware' ? '#00C85320' : '#1E3A5F',
+          color: telemetry?.source === 'hardware' ? '#00C853' : '#546E7A',
+          border: `1px solid ${telemetry?.source === 'hardware' ? '#00C85360' : '#1E3A5F'}`,
+        }}>
+          {telemetry?.source === 'hardware' ? 'HW LIVE' : 'SIMULADO'}
         </span>
       </div>
 

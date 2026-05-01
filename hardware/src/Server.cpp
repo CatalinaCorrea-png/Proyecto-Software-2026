@@ -14,7 +14,7 @@ void Server::init() {
     cfg.setJpeg(70);
 
     bool ok = Camera.begin(cfg);
-    PRINT(ok ? "CAMERA OK" : "CAMERA FAIL");
+    PRINT(ok ? "CAMERA OK\n" : "CAMERA FAIL\n");
   }
 
   WiFi.persistent(false);
