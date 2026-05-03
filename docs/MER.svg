@@ -1,0 +1,293 @@
+<svg width="920" height="660" xmlns="http://www.w3.org/2000/svg" font-family="'Courier New', Courier, monospace">
+
+  <!-- ── Fondo ── -->
+  <rect width="920" height="660" fill="#0A0E1A"/>
+
+  <!-- ── Título ── -->
+  <text x="460" y="40" text-anchor="middle" fill="#FF6D00" font-size="17" font-weight="bold">AeroSearch AI — Modelo Entidad-Relación</text>
+  <text x="460" y="58" text-anchor="middle" fill="#546E7A" font-size="11">Base de datos SQLite  ·  Sprint 3  ·  Persistencia de Misiones</text>
+
+  <!-- ══════════════════════════════════════
+       TABLA: MISSIONS
+  ══════════════════════════════════════ -->
+  <rect x="20" y="75" width="300" height="350" rx="6" fill="#0D1B2A" stroke="#2E3D4D" stroke-width="1.5"/>
+  <rect x="20" y="75" width="300" height="36" rx="6" fill="#1A2D3D"/>
+  <rect x="20" y="97"  width="300" height="14" fill="#1A2D3D"/>
+  <text x="170" y="99" text-anchor="middle" fill="#FF6D00" font-size="13" font-weight="bold">MISSIONS</text>
+  <line x1="20" y1="111" x2="320" y2="111" stroke="#2E3D4D" stroke-width="1"/>
+
+  <!-- id PK -->
+  <rect x="20"  y="111" width="300" height="24" fill="#0D1B2A"/>
+  <rect x="25"  y="115" width="22"  height="16" rx="2" fill="#FF8F00"/>
+  <text x="36"  y="127" text-anchor="middle" fill="#0A0E1A" font-size="8.5" font-weight="bold">PK</text>
+  <text x="54"  y="128" fill="#E0E0E0" font-size="12">id</text>
+  <text x="315" y="128" text-anchor="end"    fill="#546E7A" font-size="11">INTEGER</text>
+  <line x1="20" y1="135" x2="320" y2="135" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- created_at -->
+  <rect x="20"  y="135" width="300" height="24" fill="#0A1520"/>
+  <text x="54"  y="152" fill="#B0BEC5" font-size="12">created_at</text>
+  <text x="315" y="152" text-anchor="end" fill="#546E7A" font-size="11">DATETIME</text>
+  <line x1="20" y1="159" x2="320" y2="159" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- started_at -->
+  <rect x="20"  y="159" width="300" height="24" fill="#0D1B2A"/>
+  <text x="54"  y="176" fill="#B0BEC5" font-size="12">started_at</text>
+  <text x="315" y="176" text-anchor="end" fill="#546E7A" font-size="11">DATETIME</text>
+  <line x1="20" y1="183" x2="320" y2="183" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- ended_at -->
+  <rect x="20"  y="183" width="300" height="24" fill="#0A1520"/>
+  <text x="54"  y="200" fill="#B0BEC5" font-size="12">ended_at</text>
+  <text x="315" y="200" text-anchor="end" fill="#546E7A" font-size="11">DATETIME</text>
+  <line x1="20" y1="207" x2="320" y2="207" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- status -->
+  <rect x="20"  y="207" width="300" height="24" fill="#0D1B2A"/>
+  <text x="54"  y="224" fill="#B0BEC5" font-size="12">status</text>
+  <text x="315" y="224" text-anchor="end" fill="#546E7A" font-size="11">VARCHAR</text>
+  <line x1="20" y1="231" x2="320" y2="231" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- initial_battery -->
+  <rect x="20"  y="231" width="300" height="24" fill="#0A1520"/>
+  <text x="54"  y="248" fill="#B0BEC5" font-size="12">initial_battery</text>
+  <text x="315" y="248" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+  <line x1="20" y1="255" x2="320" y2="255" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- final_battery -->
+  <rect x="20"  y="255" width="300" height="24" fill="#0D1B2A"/>
+  <text x="54"  y="272" fill="#B0BEC5" font-size="12">final_battery</text>
+  <text x="315" y="272" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+  <line x1="20" y1="279" x2="320" y2="279" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- coverage_percent -->
+  <rect x="20"  y="279" width="300" height="24" fill="#0A1520"/>
+  <text x="54"  y="296" fill="#B0BEC5" font-size="12">coverage_percent</text>
+  <text x="315" y="296" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+  <line x1="20" y1="303" x2="320" y2="303" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- detections_count -->
+  <rect x="20"  y="303" width="300" height="24" fill="#0D1B2A"/>
+  <text x="54"  y="320" fill="#B0BEC5" font-size="12">detections_count</text>
+  <text x="315" y="320" text-anchor="end" fill="#546E7A" font-size="11">INTEGER</text>
+  <line x1="20" y1="327" x2="320" y2="327" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- grid_rows -->
+  <rect x="20"  y="327" width="300" height="24" fill="#0A1520"/>
+  <text x="54"  y="344" fill="#B0BEC5" font-size="12">grid_rows</text>
+  <text x="315" y="344" text-anchor="end" fill="#546E7A" font-size="11">INTEGER</text>
+  <line x1="20" y1="351" x2="320" y2="351" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- grid_cols -->
+  <rect x="20"  y="351" width="300" height="24" fill="#0D1B2A"/>
+  <text x="54"  y="368" fill="#B0BEC5" font-size="12">grid_cols</text>
+  <text x="315" y="368" text-anchor="end" fill="#546E7A" font-size="11">INTEGER</text>
+  <line x1="20" y1="375" x2="320" y2="375" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- grid_center_lat -->
+  <rect x="20"  y="375" width="300" height="24" fill="#0A1520"/>
+  <text x="54"  y="392" fill="#B0BEC5" font-size="12">grid_center_lat</text>
+  <text x="315" y="392" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+  <line x1="20" y1="399" x2="320" y2="399" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- grid_center_lng -->
+  <rect x="20"  y="399" width="300" height="24" fill="#0D1B2A"/>
+  <text x="54"  y="416" fill="#B0BEC5" font-size="12">grid_center_lng</text>
+  <text x="315" y="416" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+
+  <!-- border re-draw on top -->
+  <rect x="20" y="75" width="300" height="350" rx="6" fill="none" stroke="#2E3D4D" stroke-width="1.5"/>
+
+
+  <!-- ══════════════════════════════════════
+       TABLA: DETECTIONS
+  ══════════════════════════════════════ -->
+  <rect x="600" y="75"  width="300" height="276" rx="6" fill="#0D1B2A" stroke="#2E3D4D" stroke-width="1.5"/>
+  <rect x="600" y="75"  width="300" height="36"  rx="6" fill="#1A2D3D"/>
+  <rect x="600" y="97"  width="300" height="14"  fill="#1A2D3D"/>
+  <text x="750" y="99" text-anchor="middle" fill="#FF6D00" font-size="13" font-weight="bold">DETECTIONS</text>
+  <line x1="600" y1="111" x2="900" y2="111" stroke="#2E3D4D" stroke-width="1"/>
+
+  <!-- id PK -->
+  <rect x="600" y="111" width="300" height="24" fill="#0D1B2A"/>
+  <rect x="605" y="115" width="22"  height="16" rx="2" fill="#FF8F00"/>
+  <text x="616" y="127" text-anchor="middle" fill="#0A0E1A" font-size="8.5" font-weight="bold">PK</text>
+  <text x="634" y="128" fill="#E0E0E0" font-size="12">id</text>
+  <text x="895" y="128" text-anchor="end"    fill="#546E7A" font-size="11">VARCHAR</text>
+  <line x1="600" y1="135" x2="900" y2="135" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- mission_id FK -->
+  <rect x="600" y="135" width="300" height="24" fill="#0A1520"/>
+  <rect x="605" y="139" width="22"  height="16" rx="2" fill="#00ACC1"/>
+  <text x="616" y="151" text-anchor="middle" fill="#0A0E1A" font-size="8.5" font-weight="bold">FK</text>
+  <text x="634" y="152" fill="#E0E0E0" font-size="12">mission_id</text>
+  <text x="895" y="152" text-anchor="end"    fill="#546E7A" font-size="11">INTEGER</text>
+  <line x1="600" y1="159" x2="900" y2="159" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- timestamp -->
+  <rect x="600" y="159" width="300" height="24" fill="#0D1B2A"/>
+  <text x="634" y="176" fill="#B0BEC5" font-size="12">timestamp</text>
+  <text x="895" y="176" text-anchor="end" fill="#546E7A" font-size="11">DATETIME</text>
+  <line x1="600" y1="183" x2="900" y2="183" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- position_lat -->
+  <rect x="600" y="183" width="300" height="24" fill="#0A1520"/>
+  <text x="634" y="200" fill="#B0BEC5" font-size="12">position_lat</text>
+  <text x="895" y="200" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+  <line x1="600" y1="207" x2="900" y2="207" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- position_lng -->
+  <rect x="600" y="207" width="300" height="24" fill="#0D1B2A"/>
+  <text x="634" y="224" fill="#B0BEC5" font-size="12">position_lng</text>
+  <text x="895" y="224" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+  <line x1="600" y1="231" x2="900" y2="231" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- position_altitude -->
+  <rect x="600" y="231" width="300" height="24" fill="#0A1520"/>
+  <text x="634" y="248" fill="#B0BEC5" font-size="12">position_altitude</text>
+  <text x="895" y="248" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+  <line x1="600" y1="255" x2="900" y2="255" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- confidence -->
+  <rect x="600" y="255" width="300" height="24" fill="#0D1B2A"/>
+  <text x="634" y="272" fill="#B0BEC5" font-size="12">confidence</text>
+  <text x="895" y="272" text-anchor="end" fill="#546E7A" font-size="11">VARCHAR</text>
+  <line x1="600" y1="279" x2="900" y2="279" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- source -->
+  <rect x="600" y="279" width="300" height="24" fill="#0A1520"/>
+  <text x="634" y="296" fill="#B0BEC5" font-size="12">source</text>
+  <text x="895" y="296" text-anchor="end" fill="#546E7A" font-size="11">VARCHAR</text>
+  <line x1="600" y1="303" x2="900" y2="303" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- temperature -->
+  <rect x="600" y="303" width="300" height="24" fill="#0D1B2A"/>
+  <text x="634" y="320" fill="#B0BEC5" font-size="12">temperature</text>
+  <text x="895" y="320" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+  <line x1="600" y1="327" x2="900" y2="327" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- rgb_confidence -->
+  <rect x="600" y="327" width="300" height="24" fill="#0A1520"/>
+  <text x="634" y="344" fill="#B0BEC5" font-size="12">rgb_confidence</text>
+  <text x="895" y="344" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+
+  <rect x="600" y="75" width="300" height="276" rx="6" fill="none" stroke="#2E3D4D" stroke-width="1.5"/>
+
+
+  <!-- ══════════════════════════════════════
+       TABLA: GRID_CELLS
+  ══════════════════════════════════════ -->
+  <rect x="600" y="395" width="300" height="228" rx="6" fill="#0D1B2A" stroke="#2E3D4D" stroke-width="1.5"/>
+  <rect x="600" y="395" width="300" height="36"  rx="6" fill="#1A2D3D"/>
+  <rect x="600" y="417" width="300" height="14"  fill="#1A2D3D"/>
+  <text x="750" y="419" text-anchor="middle" fill="#FF6D00" font-size="13" font-weight="bold">GRID_CELLS</text>
+  <line x1="600" y1="431" x2="900" y2="431" stroke="#2E3D4D" stroke-width="1"/>
+
+  <!-- id PK -->
+  <rect x="600" y="431" width="300" height="24" fill="#0D1B2A"/>
+  <rect x="605" y="435" width="22"  height="16" rx="2" fill="#FF8F00"/>
+  <text x="616" y="447" text-anchor="middle" fill="#0A0E1A" font-size="8.5" font-weight="bold">PK</text>
+  <text x="634" y="448" fill="#E0E0E0" font-size="12">id</text>
+  <text x="895" y="448" text-anchor="end"    fill="#546E7A" font-size="11">INTEGER</text>
+  <line x1="600" y1="455" x2="900" y2="455" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- mission_id FK -->
+  <rect x="600" y="455" width="300" height="24" fill="#0A1520"/>
+  <rect x="605" y="459" width="22"  height="16" rx="2" fill="#00ACC1"/>
+  <text x="616" y="471" text-anchor="middle" fill="#0A0E1A" font-size="8.5" font-weight="bold">FK</text>
+  <text x="634" y="472" fill="#E0E0E0" font-size="12">mission_id</text>
+  <text x="895" y="472" text-anchor="end"    fill="#546E7A" font-size="11">INTEGER</text>
+  <line x1="600" y1="479" x2="900" y2="479" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- row -->
+  <rect x="600" y="479" width="300" height="24" fill="#0D1B2A"/>
+  <text x="634" y="496" fill="#B0BEC5" font-size="12">row</text>
+  <text x="895" y="496" text-anchor="end" fill="#546E7A" font-size="11">INTEGER</text>
+  <line x1="600" y1="503" x2="900" y2="503" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- col -->
+  <rect x="600" y="503" width="300" height="24" fill="#0A1520"/>
+  <text x="634" y="520" fill="#B0BEC5" font-size="12">col</text>
+  <text x="895" y="520" text-anchor="end" fill="#546E7A" font-size="11">INTEGER</text>
+  <line x1="600" y1="527" x2="900" y2="527" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- cell_lat -->
+  <rect x="600" y="527" width="300" height="24" fill="#0D1B2A"/>
+  <text x="634" y="544" fill="#B0BEC5" font-size="12">cell_lat</text>
+  <text x="895" y="544" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+  <line x1="600" y1="551" x2="900" y2="551" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- cell_lng -->
+  <rect x="600" y="551" width="300" height="24" fill="#0A1520"/>
+  <text x="634" y="568" fill="#B0BEC5" font-size="12">cell_lng</text>
+  <text x="895" y="568" text-anchor="end" fill="#546E7A" font-size="11">FLOAT</text>
+  <line x1="600" y1="575" x2="900" y2="575" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- status -->
+  <rect x="600" y="575" width="300" height="24" fill="#0D1B2A"/>
+  <text x="634" y="592" fill="#B0BEC5" font-size="12">status</text>
+  <text x="895" y="592" text-anchor="end" fill="#546E7A" font-size="11">VARCHAR</text>
+  <line x1="600" y1="599" x2="900" y2="599" stroke="#1A2535" stroke-width="0.5"/>
+
+  <!-- explored_at -->
+  <rect x="600" y="599" width="300" height="24" fill="#0A1520"/>
+  <text x="634" y="616" fill="#B0BEC5" font-size="12">explored_at</text>
+  <text x="895" y="616" text-anchor="end" fill="#546E7A" font-size="11">DATETIME</text>
+
+  <rect x="600" y="395" width="300" height="228" rx="6" fill="none" stroke="#2E3D4D" stroke-width="1.5"/>
+
+
+  <!-- ══════════════════════════════════════
+       RELACIONES
+  ══════════════════════════════════════ -->
+
+  <!-- Horizontal desde MISSIONS.id (y=123) hasta junction x=480 -->
+  <path d="M 320,123 H 480" stroke="#FF6D00" stroke-width="1.5" fill="none" stroke-dasharray="5,3" opacity="0.9"/>
+  <!-- Trunk vertical en x=480 -->
+  <path d="M 480,123 V 467" stroke="#FF6D00" stroke-width="1.5" fill="none" stroke-dasharray="5,3" opacity="0.9"/>
+  <!-- Branch → DETECTIONS.mission_id (y=147) -->
+  <path d="M 480,147 H 600" stroke="#FF6D00" stroke-width="1.5" fill="none" stroke-dasharray="5,3" opacity="0.9"/>
+  <!-- Branch → GRID_CELLS.mission_id (y=467) -->
+  <path d="M 480,467 H 600" stroke="#FF6D00" stroke-width="1.5" fill="none" stroke-dasharray="5,3" opacity="0.9"/>
+
+  <!-- Punto de junction -->
+  <circle cx="480" cy="123" r="3" fill="#FF6D00" opacity="0.9"/>
+  <circle cx="480" cy="147" r="3" fill="#FF6D00" opacity="0.9"/>
+  <circle cx="480" cy="467" r="3" fill="#FF6D00" opacity="0.9"/>
+
+  <!-- Cardinalidad "1" en MISSIONS -->
+  <rect x="325" y="115" width="16" height="16" rx="3" fill="#1A2D3D" stroke="#FF6D00" stroke-width="1"/>
+  <text x="333" y="127" text-anchor="middle" fill="#FF6D00" font-size="11" font-weight="bold">1</text>
+
+  <!-- Cardinalidad "N" en DETECTIONS -->
+  <rect x="582" y="139" width="16" height="16" rx="3" fill="#1A2D3D" stroke="#00BCD4" stroke-width="1"/>
+  <text x="590" y="151" text-anchor="middle" fill="#00BCD4" font-size="11" font-weight="bold">N</text>
+
+  <!-- Cardinalidad "N" en GRID_CELLS -->
+  <rect x="582" y="459" width="16" height="16" rx="3" fill="#1A2D3D" stroke="#00BCD4" stroke-width="1"/>
+  <text x="590" y="471" text-anchor="middle" fill="#00BCD4" font-size="11" font-weight="bold">N</text>
+
+  <!-- Etiquetas de relación -->
+  <text x="540" y="141" text-anchor="middle" fill="#78909C" font-size="10">registra</text>
+  <text x="540" y="461" text-anchor="middle" fill="#78909C" font-size="10">cubre</text>
+
+
+  <!-- ══════════════════════════════════════
+       LEYENDA
+  ══════════════════════════════════════ -->
+  <line x1="20" y1="634" x2="900" y2="634" stroke="#1E2D3D" stroke-width="1"/>
+
+  <rect x="20"  y="641" width="22" height="14" rx="2" fill="#FF8F00"/>
+  <text x="31"  y="652" text-anchor="middle" fill="#0A0E1A" font-size="8.5" font-weight="bold">PK</text>
+  <text x="48"  y="652" fill="#78909C" font-size="11">Clave Primaria</text>
+
+  <rect x="160" y="641" width="22" height="14" rx="2" fill="#00ACC1"/>
+  <text x="171" y="652" text-anchor="middle" fill="#0A0E1A" font-size="8.5" font-weight="bold">FK</text>
+  <text x="188" y="652" fill="#78909C" font-size="11">Clave Foránea</text>
+
+  <line x1="320" y1="644" x2="345" y2="644" stroke="#FF6D00" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="350" y="652" fill="#78909C" font-size="11">Relación 1:N</text>
+
+  <text x="900" y="652" text-anchor="end" fill="#2E3D4D" font-size="10">AeroSearch AI · Sprint 3</text>
+
+</svg>
