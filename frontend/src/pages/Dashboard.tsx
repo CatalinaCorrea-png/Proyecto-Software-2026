@@ -21,9 +21,9 @@ export function Dashboard() {
     <div style={{
       display: 'grid',
       gridTemplateColumns: '1fr .5fr .5fr',
-      gridTemplateRows: '100vh',
-      width: '100vw',
-      height: '100vh',
+      gridTemplateRows: '1fr',
+      width: '100%',
+      height: '100%',
       overflow: 'hidden',
       background: '#0A0E1A',
       gap: 10,
