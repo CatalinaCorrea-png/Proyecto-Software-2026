@@ -10,22 +10,21 @@ void FlyHandler::init() {
 }
 
 void FlyHandler::initIMU() {
-  // Wire.begin(MPU_SDA_PIN, MPU_SLC_PIN);  // SDA, SCL
+  Wire.begin(MPU_SDA_PIN, MPU_SCL_PIN);
 
-  // // MPU6500 (sale de sleep)
-  // Wire.beginTransmission(_address);
-  // Wire.write(0x6B);  // PWR_MGMT_1
-  // Wire.write(0x00);  // wake up
-  // Wire.endTransmission();
+  Wire.beginTransmission(_address);
+  Wire.write(0x6B);  // PWR_MGMT_1
+  Wire.write(0x00);  // wake up
+  Wire.endTransmission();
 
-  // PRINT("MPU6500 ready");
+  _imuReady = true;
 }
 
-void FlyHandler::beginRead() {
+bool FlyHandler::beginRead() {
   Wire.beginTransmission(_address);
   Wire.write(0x3B);
   Wire.endTransmission(false);
-  Wire.requestFrom(_address, (uint8_t)14, (uint8_t)true);
+  return Wire.requestFrom(_address, (uint8_t)14, (uint8_t)true) == 14;
 }
 
 void FlyHandler::onUpdate(DeltaTime dt, Movement &mov) {
@@ -66,7 +65,9 @@ void FlyHandler::onUpdate(DeltaTime dt, Movement &mov) {
 }
 
 IMUData FlyHandler::readIMU() {
-  beginRead();
+  if (!_imuReady || !beginRead()) {
+    return IMUData{};
+  }
   // 6 bytes de acceleracion
   int16_t ax = Wire.read() << 8 | Wire.read();
   int16_t ay = Wire.read() << 8 | Wire.read();

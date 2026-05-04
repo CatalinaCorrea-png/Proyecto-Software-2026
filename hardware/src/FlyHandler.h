@@ -31,7 +31,7 @@ public:
   void init();
   void initIMU();
   void initGPS();
-  void beginRead();
+  bool beginRead();
   void onUpdate(DeltaTime dt, Movement &mov);
   IMUData readIMU();
 
@@ -40,6 +40,7 @@ public:
 
 private:
   uint8_t _address = 0x68;
+  bool _imuReady = false;
 
   float _alpha = 0.98f;
   float _roll = 0;

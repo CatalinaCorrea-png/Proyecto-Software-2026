@@ -16,8 +16,9 @@ import json, cv2, numpy as np, base64, asyncio, time, uuid, socket, threading, r
 app = FastAPI(title="AeroSearch AI")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_methods=["*"], allow_headers=["*"],
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.on_event("shutdown")
@@ -184,6 +185,7 @@ def drone_control(cmd: DroneCommand):
     drone_state.cmd_roll = cmd.roll
     payload = f"T:{cmd.throttle},Y:{cmd.yaw},P:{cmd.pitch},R:{cmd.roll}"
     _udp_sock.sendto(payload.encode(), (DRONE_IP, DRONE_UDP_PORT))
+    _last_cmd_time = time.time()
     return {"sent": payload, "target": f"{DRONE_IP}:{DRONE_UDP_PORT}"}
 
 # Este es el dron. Envía Telemetría GPS, batería, estado.

@@ -34,8 +34,7 @@ public:
   }
 
   void onUpdate(DeltaTime dt) {
-    // float throttle = _controller.getThrottle();
-    // _flyHandler.onUpdate(dt, throttle);
+    _flyHandler.onUpdate(dt, _movement);
 
     // PRINT("Satellites: %d\n", _gps.satellites.value());
     updateData();

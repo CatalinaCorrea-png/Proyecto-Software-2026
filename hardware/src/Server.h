@@ -41,7 +41,7 @@ private:
   IPAddress _remoteIP;
   uint16_t _remotePort;
 
-  Timer _telemetryTimer{200};  // push telemetría cada 200ms (5Hz)
+  Timer _telemetryTimer{1000};  // push telemetría cada 1s (1Hz)
 
   int16_t _throttle = 0;
   int16_t _yaw = 0;
