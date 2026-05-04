@@ -36,7 +36,7 @@ void loop() {
   --- Implementacion vieja falta implementacion de controller para ver si deprecar
 
 
-  bool updated = controller.getUpdated();
+  // bool updated = controller.getUpdated();
 
   {
     // Timed secuences

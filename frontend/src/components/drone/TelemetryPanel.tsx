@@ -51,11 +51,15 @@ export function TelemetryPanel({ telemetry, isConnected, detectionCount }: Props
           marginLeft: 'auto',
           fontSize: 9, fontWeight: 'bold', letterSpacing: 1,
           padding: '2px 6px', borderRadius: 3,
-          background: telemetry?.source === 'hardware' ? '#00C85320' : '#1E3A5F',
-          color: telemetry?.source === 'hardware' ? '#00C853' : '#546E7A',
-          border: `1px solid ${telemetry?.source === 'hardware' ? '#00C85360' : '#1E3A5F'}`,
+          background: telemetry?.source === 'hardware' ? '#00C85320'
+            : telemetry?.source === 'manual' ? '#FF6D0020' : '#1E3A5F',
+          color: telemetry?.source === 'hardware' ? '#00C853'
+            : telemetry?.source === 'manual' ? '#FF6D00' : '#546E7A',
+          border: `1px solid ${telemetry?.source === 'hardware' ? '#00C85360'
+            : telemetry?.source === 'manual' ? '#FF6D0060' : '#1E3A5F'}`,
         }}>
-          {telemetry?.source === 'hardware' ? 'HW LIVE' : 'SIMULADO'}
+          {telemetry?.source === 'hardware' ? 'HW LIVE'
+            : telemetry?.source === 'manual' ? 'MANUAL' : 'SIMULADO'}
         </span>
       </div>
 

@@ -21,7 +21,7 @@ public:
   Drone() : _gpsSerial(2), _data({0.0f, 0.0f, 0.0f, 0.0f}) {}
 
   void init() {
-    _flyHandler.init();
+    // _flyHandler.init();
     // _controller.init();
     // initGPS();
 

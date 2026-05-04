@@ -20,6 +20,9 @@ class DroneState:
     mission_start: float = field(default_factory=time.time)
     real_telemetry_active: bool = False
     last_hw_telemetry: float = 0.0
+    cmd_throttle: int = 0
+    cmd_pitch: int = 0
+    cmd_roll: int = 0
 
 drone_state = DroneState()
 
