@@ -15,8 +15,9 @@ import json, cv2, numpy as np, base64, asyncio, time, uuid, socket
 app = FastAPI(title="AeroSearch AI")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_methods=["*"], allow_headers=["*"],
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 yolo = YoloDetector(model_size="yolov8n")
@@ -64,8 +65,10 @@ def health():
 
 @app.post("/drone/control")
 def drone_control(cmd: DroneCommand):
+    global _last_cmd_time
     payload = f"T:{cmd.throttle},Y:{cmd.yaw},P:{cmd.pitch},R:{cmd.roll}"
     _udp_sock.sendto(payload.encode(), (DRONE_IP, DRONE_UDP_PORT))
+    _last_cmd_time = time.time()
     return {"sent": payload, "target": f"{DRONE_IP}:{DRONE_UDP_PORT}"}
 
 # Este es el dron. Envía Telemetría GPS, batería, estado.

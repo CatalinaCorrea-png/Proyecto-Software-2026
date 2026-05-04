@@ -42,7 +42,7 @@ void Server::init() {
   webServer.begin();
 
   _udp.begin(UDP_PORT);
-  PRINT("UDP listening on %d\n", UDP_PORT);
+  PRINT("\nUDP listening on %d\n", UDP_PORT);
 }
 
 void Server::handleStream() {

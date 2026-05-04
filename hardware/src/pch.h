@@ -16,8 +16,8 @@
 #define MOTOR_PIN3 15
 #define MOTOR_PIN4 2
 
-#define MPU_SDA_PIN = 21
-#define MPU_SCL_PIN = 22
+#define MPU_SDA_PIN 12  // free pin (SD not used); keep LOW at boot
+#define MPU_SCL_PIN 4   // free pin (onboard flash LED — will flicker with I2C activity)
 
 #define UDP_PORT 4210
 #define UDP_TX_PORT 4211
