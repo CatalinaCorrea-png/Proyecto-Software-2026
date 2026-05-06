@@ -13,7 +13,7 @@ export interface DroneTelemetry {
   status: 'idle' | 'flying' | 'hover' | 'returning' | 'landed'
   speed: number          // m/s
   elapsed: number
-  source?: 'hardware' | 'sim'
+  source?: 'hardware' |'manual' | 'sim'
 }
 
 // Una detección de persona

@@ -11,13 +11,17 @@
   #define PRINT(...)
 #endif
 
-#define MOTOR_PIN1 13
-#define MOTOR_PIN2 14
+#define MOTOR_PIN1 15
+#define MOTOR_PIN2 15
 #define MOTOR_PIN3 15
-#define MOTOR_PIN4 2
+#define MOTOR_PIN4 15
 
-#define MPU_SDA_PIN 12  // free pin (SD not used); keep LOW at boot
-#define MPU_SCL_PIN 4   // free pin (onboard flash LED — will flicker with I2C activity)
+#define MPU_SDA_PIN 13
+#define MPU_SCL_PIN 12
 
 #define UDP_PORT 4210
 #define UDP_TX_PORT 4211
+
+#include "Timer.h"
+
+inline Timer debugTimer(200);

@@ -1,9 +1,10 @@
 #include "Server.h"
 #include <ArduinoJson.h>
-#include "Controller.h"
+
 namespace Drone {
 
-void Server::init() {
+void Server::init(Stream& uartC3) {
+  _uartC3 = &uartC3;
 
   {
     using namespace esp32cam;
@@ -25,24 +26,18 @@ void Server::init() {
     delay(500);
   }
 
-  PRINT("http://");
   PRINT("IP: %s\n", WiFi.localIP().toString().c_str());
-  PRINT("  /cam-lo.jpg");
-  PRINT("  /cam-hi.jpg");
-  PRINT("  /cam-mid.jpg");
-  PRINT("  /stream");
-  PRINT("  /status");
 
-  webServer.on("/cam-lo.jpg", [this]() { this->handleJpgLo(); });
-  webServer.on("/cam-hi.jpg", [this]() { this->handleJpgHi(); });
+  webServer.on("/cam-lo.jpg",  [this]() { this->handleJpgLo(); });
+  webServer.on("/cam-hi.jpg",  [this]() { this->handleJpgHi(); });
   webServer.on("/cam-mid.jpg", [this]() { this->handleJpgMid(); });
-  webServer.on("/stream", [this]() { this->handleStream(); });
-  webServer.on("/status", [this]() { this->handleDroneData(); });
+  webServer.on("/stream",      [this]() { this->handleStream(); });
+  webServer.on("/status",      [this]() { this->handleDroneData(); });
 
   webServer.begin();
 
   _udp.begin(UDP_PORT);
-  PRINT("\nUDP listening on %d\n", UDP_PORT);
+  PRINT("UDP listening on %d\n", UDP_PORT);
 }
 
 void Server::handleStream() {
@@ -64,15 +59,57 @@ void Server::handleStream() {
     client.print("Content-Length: ");
     client.print(frame->size());
     client.print("\r\n\r\n");
-
     frame->writeTo(client);
     client.print("\r\n");
 
     handleUDP();
+    handleUART();
     yield();
   }
 
   client.stop();
+}
+
+void Server::handleUDP() {
+  int packetSize = _udp.parsePacket();
+  if (!packetSize)
+    return;
+
+  char incoming[128];
+  int len = _udp.read(incoming, sizeof(incoming) - 1);
+  if (len > 0)
+    incoming[len] = 0;
+
+  _remoteIP   = _udp.remoteIP();
+  _remotePort = _udp.remotePort();
+
+  sscanf(incoming, "T:%d,Y:%d,P:%d,R:%d", &_throttle, &_yaw, &_pitch, &_roll);
+
+  sendCommandToC3(_throttle, _yaw, _pitch, _roll);
+  sendTelemetry();
+}
+
+void Server::sendCommandToC3(int16_t t, int16_t y, int16_t p, int16_t r) {
+  if (!_uartC3)
+    return;
+  char buf[64];
+  snprintf(buf, sizeof(buf), "T:%d,Y:%d,P:%d,R:%d\n", t, y, p, r);
+  _uartC3->print(buf);
+}
+
+void Server::handleUART() {
+  if (!_uartC3)
+    return;
+
+  while (_uartC3->available()) {
+    char buf[128];
+    int len = _uartC3->readBytesUntil('\n', buf, sizeof(buf) - 1);
+    if (len <= 0)
+      break;
+    buf[len] = 0;
+    sscanf(buf, "LAT:%f,LNG:%f,ALT:%f,SPD:%f",
+           &_data.lat, &_data.lng, &_data.altitude, &_data.speed);
+  }
 }
 
 void Server::sendPeriodicTelemetry() {
@@ -83,73 +120,39 @@ void Server::sendPeriodicTelemetry() {
   sendTelemetry();
 }
 
-void Server::handleUDP() {
-  int packetSize = _udp.parsePacket();
-  if (packetSize) {
-    char incoming[128];
-
-    int len = _udp.read(incoming, sizeof(incoming) - 1);
-    if (len > 0)
-      incoming[len] = 0;
-
-    // guardar origen (para responder)
-    _remoteIP = _udp.remoteIP();
-    _remotePort = _udp.remotePort();
-
-    // formato: T:1200,Y:0,P:0,R:0
-    sscanf(incoming, "T:%d,Y:%d,P:%d,R:%d", &_throttle, &_yaw, &_pitch, &_roll);
-
-    Movement mov = {_throttle, _pitch, _roll};
-
-    _drone->setMovement(mov);
-
-    PRINT("RX UDP -> T:%d Y:%d P:%d R:%d\n", _throttle, _yaw, _pitch, _roll);
-
-    // responder telemetría
-    sendTelemetry();
-  }
-}
-
 void Server::sendTelemetry() {
   if (_remoteIP == IPAddress(0, 0, 0, 0))
     return;
 
   char buffer[128];
-
-  const DroneData &data = _drone->getDroneData();
-
-  sprintf(buffer, "LAT:%.6f,LNG:%.6f,ALT:%.2f", data.lat, data.lng, data.altitude);
+  snprintf(buffer, sizeof(buffer), "LAT:%.6f,LNG:%.6f,ALT:%.2f",
+           _data.lat, _data.lng, _data.altitude);
 
   _udp.beginPacket(_remoteIP, UDP_TX_PORT);
-  _udp.write((uint8_t *)buffer, strlen(buffer));
+  _udp.write((uint8_t*)buffer, strlen(buffer));
   _udp.endPacket();
 }
 
 void Server::handleDroneData() {
   JsonDocument doc;
-  const DroneData &data = _drone->getDroneData();
-
-  doc["lat"] = data.lat;
-  doc["lng"] = data.lng;
-  doc["altitude"] = data.altitude;
-  doc["speed"] = data.speed;
-  // doc["battery"] = data.battery;
+  doc["lat"]      = _data.lat;
+  doc["lng"]      = _data.lng;
+  doc["altitude"] = _data.altitude;
+  doc["speed"]    = _data.speed;
 
   String json;
   serializeJson(doc, json);
-
   webServer.send(200, "application/json", json);
 }
 
 void Server::serveJpg() {
   auto frame = esp32cam::capture();
 
-  if (frame == nullptr) {
+  if (!frame) {
     PRINT("CAPTURE FAIL");
     webServer.send(503, "", "");
     return;
   }
-  PRINT("CAPTURE OK %dx%d %db\n", frame->getWidth(), frame->getHeight(), static_cast<int>(frame->size()));
 
   webServer.setContentLength(frame->size());
   webServer.send(200, "image/jpeg");
@@ -158,23 +161,20 @@ void Server::serveJpg() {
 }
 
 void Server::handleJpgLo() {
-  if (!esp32cam::Camera.changeResolution(loRes)) {
+  if (!esp32cam::Camera.changeResolution(loRes))
     PRINT("SET-LO-RES FAIL");
-  }
   serveJpg();
 }
 
 void Server::handleJpgHi() {
-  if (!esp32cam::Camera.changeResolution(hiRes)) {
+  if (!esp32cam::Camera.changeResolution(hiRes))
     PRINT("SET-HI-RES FAIL");
-  }
   serveJpg();
 }
 
 void Server::handleJpgMid() {
-  if (!esp32cam::Camera.changeResolution(midRes)) {
+  if (!esp32cam::Camera.changeResolution(midRes))
     PRINT("SET-MID-RES FAIL");
-  }
   serveJpg();
 }
 

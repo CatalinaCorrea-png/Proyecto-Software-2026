@@ -16,15 +16,13 @@ struct DroneData {
 };
 
 class Drone {
-
 public:
-  Drone() : _gpsSerial(2), _data({0.0f, 0.0f, 0.0f, 0.0f}) {}
+  // HardwareSerial(1) = UART1, disponible en C3 (UART0 lo usa Serial/USB)
+  Drone() : _gpsSerial(1), _data({0.0f, 0.0f, 0.0f, 0.0f}) {}
 
   void init() {
-    // _flyHandler.init();
-    // _controller.init();
-    // initGPS();
-
+    _flyHandler.init();
+    // initGPS();  // requiere un 3er UART — no disponible en C3 mini
     updateData();
   }
 
@@ -35,8 +33,6 @@ public:
 
   void onUpdate(DeltaTime dt) {
     _flyHandler.onUpdate(dt, _movement);
-
-    // PRINT("Satellites: %d\n", _gps.satellites.value());
     updateData();
   }
 
@@ -49,25 +45,22 @@ public:
       _data.lat = _gps.location.lat();
       _data.lng = _gps.location.lng();
     }
-
-    if (_gps.altitude.isValid()) {
+    if (_gps.altitude.isValid())
       _data.altitude = _gps.altitude.meters();
-    }
-
-    if (_gps.speed.isValid()) {
+    if (_gps.speed.isValid())
       _data.speed = _gps.speed.kmph();
-    }
   }
 
-  const DroneData &getDroneData() const { return _data; }
-  const Movement &getMovement() const { return _movement; }
-  void setMovement(Movement &mov) { _movement = mov; }
+  const DroneData&  getDroneData()   const { return _data; }
+  const Movement&   getMovement()    const { return _movement; }
+  const FlyHandler& getFlyHandler()  const { return _flyHandler; }
+  void setMovement(Movement& mov) { _movement = mov; }
 
 private:
-  DroneData _data;
-  FlyHandler _flyHandler;
-  Movement _movement;
-  TinyGPSPlus _gps;
+  DroneData      _data;
+  FlyHandler     _flyHandler;
+  Movement       _movement;
+  TinyGPSPlus    _gps;
   HardwareSerial _gpsSerial;
 };
 

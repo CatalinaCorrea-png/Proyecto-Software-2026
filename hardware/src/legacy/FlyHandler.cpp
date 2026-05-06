@@ -6,7 +6,7 @@ void FlyHandler::init() {
   motorFR.init(MOTOR_PIN2, 1);
   motorBL.init(MOTOR_PIN3, 2);
   motorBR.init(MOTOR_PIN4, 3);
-  // initIMU();
+  initIMU();
 }
 
 void FlyHandler::initIMU() {
@@ -45,13 +45,16 @@ void FlyHandler::onUpdate(DeltaTime dt, Movement &mov) {
 
   // Mezcla de motores (quadcopter +)
   //        FL         FR          BL          BR
-  
+
   int fl = mov.throttle + rollOut - pitchOut;  // - roll, - pitch
   int fr = mov.throttle - rollOut - pitchOut;  // + roll, - pitch
   int bl = mov.throttle + rollOut + pitchOut;  // - roll, + pitch
   int br = mov.throttle - rollOut + pitchOut;  // + roll, + pitch
 
-  PRINT("Potencia: motor FL: %d, motor FR: %d, motor BL: %d, motor BR: %d\n", fl, fr, bl, br);
+  if (debugTimer.tick()) {
+    // PRINT("Potencia: motor FL: %d, motor FR: %d, motor BL: %d, motor BR: %d\n", fl, fr, bl, br);
+    PRINT("Roll: %.2f, Pitch: %.2f\n", _roll, _pitch);
+  }
 
   motorFL.setSpeed(constrain(fl, 0, 255));
   motorFR.setSpeed(constrain(fr, 0, 255));
