@@ -54,3 +54,25 @@ export type WsMessage =
   | { type: 'detection'; data: Detection }
   | { type: 'grid_update'; data: GridCell }
   | { type: 'mission_status'; data: { status: Mission['status'] } }
+
+// Imagen capturada almacenada en MongoDB
+export interface ImageMeta {
+  id: string
+  mission_id: string
+  timestamp: string
+  lat: number
+  lng: number
+  altitude_m: number
+  view_mode: 'rgb' | 'thermal' | 'overlay'
+  has_detections: boolean
+  detection_count: number
+  thumbnail_b64: string
+  detection_ids: string[]
+}
+
+export interface ImageListResponse {
+  items: ImageMeta[]
+  total: number
+  page: number
+  page_size: number
+}

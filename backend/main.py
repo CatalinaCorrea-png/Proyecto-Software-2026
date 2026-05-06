@@ -11,9 +11,28 @@ from core.config import DRONE_IP, DRONE_UDP_PORT, DRONE_UDP_TX_PORT
 from core.config import CAMERA_SOURCE, CAMERA_INDEX
 from modules.drone.camera import open_camera # se usa el FrameGrabber ahora
 from modules.drone.udp_telemetry import start_udp_listener, hw_watchdog
+from contextlib import asynccontextmanager
+from db.mongodb import connect as mongo_connect, disconnect as mongo_disconnect
+from routers.images import router as images_router
+from routers.missions_mongo import router as missions_mongo_router
+# Auto-guardado en MongoDB de frames con detección
+from modules.storage.image_service import save_image
+from modules.storage.schemas import (ImageUploadRequest, DetectionPayload, BoundingBox,)
+from datetime import datetime as _dt
 import json, cv2, numpy as np, base64, asyncio, time, uuid, socket, threading, requests
 
-app = FastAPI(title="AeroSearch AI")
+@asynccontextmanager
+async def lifespan(app):
+    await mongo_connect()
+    await start_udp_listener(DRONE_UDP_TX_PORT)
+    asyncio.create_task(hw_watchdog())
+    asyncio.create_task(_keepalive_loop())
+    yield
+    if _grabber is not None:
+        _grabber.stop()
+    await mongo_disconnect()
+
+app = FastAPI(title="AeroSearch AI", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,10 +40,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("shutdown")
-def shutdown_event():
-    if _grabber is not None:
-        _grabber.stop()
+# @app.on_event("shutdown")
+# def shutdown_event():
+#     if _grabber is not None:
+#         _grabber.stop()
+app.include_router(images_router)
+app.include_router(missions_mongo_router)
 
 # Detector de objetos RGB (YOLOv8n), detector térmico (+ simulacion)
 yolo = YoloDetector(model_size="yolov8n")
@@ -49,11 +70,11 @@ _udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 _last_cmd_time: float = 0.0
 
 
-@app.on_event("startup")
-async def startup():
-    await start_udp_listener(DRONE_UDP_TX_PORT)
-    asyncio.create_task(hw_watchdog())
-    asyncio.create_task(_keepalive_loop())
+# @app.on_event("startup")
+# async def startup():
+#     await start_udp_listener(DRONE_UDP_TX_PORT)
+#     asyncio.create_task(hw_watchdog())
+#     asyncio.create_task(_keepalive_loop())
 
 
 async def _keepalive_loop():
@@ -363,6 +384,40 @@ async def detection_websocket(websocket: WebSocket):
                         }
                     }))
 
+                    # Guardar frame con detección en MongoDB (no bloquea el WS)
+                    async def _persist(
+                        _frame=frame,
+                        _conf_label=conf_label,
+                        _det=det,
+                        _lat=drone_state.lat,
+                        _lng=drone_state.lng,
+                        _alt=drone_state.altitude,
+                    ):
+                        _, buf = cv2.imencode('.jpg', _frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                        det_payload = DetectionPayload(
+                            confidence=_conf_label,
+                            confidence_score=float(_det.get("confidence", 0.5)),
+                            source=_det.get("source", "rgb"),
+                            temperature_celsius=_det.get("temperature"),
+                            bounding_box=BoundingBox(
+                                x_norm=_det.get("x", 0.0), y_norm=_det.get("y", 0.0),
+                                w_norm=_det.get("w", 0.0), h_norm=_det.get("h", 0.0),
+                            ),
+                        )
+                        await save_image(
+                            buf.tobytes(),
+                            ImageUploadRequest(
+                                mission_id="mission-001",
+                                lat=_lat,
+                                lng=_lng,
+                                altitude_m=_alt,
+                                timestamp=_dt.utcnow(),
+                                view_mode="rgb",
+                                camera_source=CAMERA_SOURCE,
+                                detections=[det_payload],
+                            ),
+                        )
+                    asyncio.create_task(_persist())
             # 6. Encode frames en thread
             # def encode_frames(f, rgb_dets, t_matrix):
             def encode_frame(f, rgb_dets):

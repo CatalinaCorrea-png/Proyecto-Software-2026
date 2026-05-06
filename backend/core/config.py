@@ -19,3 +19,7 @@ CAMERA_INDEX = {
     "esp32":     (ESP32_STREAM_URL, False),
     "synthetic": (None, False)
 }
+
+# MongoDB
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+MONGODB_DB  = os.getenv("MONGODB_DB",  "aerosearch")
