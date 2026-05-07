@@ -17,7 +17,7 @@ app.add_middleware(
     allow_methods=["*"], allow_headers=["*"],
 )
 
-yolo = YoloDetector(model_size="yolov8n")
+yolo = YoloDetector()
 thermal = ThermalDetector()
 thermal_sim = ThermalSimulator()          # ← Simulacion de camara térmica
 last_detection_time = 0.0
@@ -33,22 +33,17 @@ def health():
 
 @app.get("/drone/state")
 def get_drone_state():
-    from modules.detection.yolo_detector import AERIAL_ALTITUDE_THRESHOLD
-    aerial = drone_state.altitude >= AERIAL_ALTITUDE_THRESHOLD
     return {
         "altitude": drone_state.altitude,
-        "model": "aerial (fine-tuned)" if aerial else "base (COCO)",
-        "threshold": AERIAL_ALTITUDE_THRESHOLD,
+        "model": yolo.weights_name,
     }
 
 @app.post("/drone/{altitude}")
 def set_altitude(altitude: float):
-    from modules.detection.yolo_detector import AERIAL_ALTITUDE_THRESHOLD
     drone_state.altitude = max(0.0, altitude)
-    aerial = drone_state.altitude >= AERIAL_ALTITUDE_THRESHOLD
     return {
         "altitude": drone_state.altitude,
-        "model": "aerial (fine-tuned)" if aerial else "base (COCO)",
+        "model": yolo.weights_name,
     }
 
 # Este es el dron. Envía Telemetría GPS, batería, estado.
@@ -149,7 +144,7 @@ async def detection_websocket(websocket: WebSocket):
                 frame = np.random.randint(80, 120, (frame_h, frame_w, 3), dtype=np.uint8)
 
             # 2. Detección RGB (modelo varía según altitud)
-            rgb_detections = yolo.detect(frame, altitude=drone_state.altitude)
+            rgb_detections = yolo.detect(frame)
 
             # 3. Térmica simulada (para demo sin cámara térmica)
             temp_matrix = thermal_sim.generate(frame) # genera matriz térmica 32x24 usando MediaPipe Pose

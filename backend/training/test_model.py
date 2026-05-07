@@ -22,7 +22,7 @@ from pathlib import Path
 from ultralytics import YOLO
 
 BACKEND = Path(__file__).resolve().parents[1]
-FINETUNED = BACKEND / "yolov8n_aerial.pt"
+FINETUNED = BACKEND / "yolov8n_tuned_v2.pt"
 BASE      = BACKEND / "yolov8n.pt"
 OUTPUT    = Path(__file__).resolve().parent / "test_output"
 
@@ -101,14 +101,17 @@ def main():
                         help="comparar fine-tuned vs modelo base lado a lado")
     parser.add_argument("--conf", type=float, default=0.25,
                         help="umbral de confianza (default: 0.25)")
+    parser.add_argument("--model", default=None,
+                        help="path a un .pt alternativo (default: yolov8n_tuned_v2.pt)")
     args = parser.parse_args()
 
-    if not FINETUNED.exists():
-        print(f"No se encontraron pesos fine-tuneados en {FINETUNED}")
+    finetuned_path = Path(args.model) if args.model else FINETUNED
+    if not finetuned_path.exists():
+        print(f"No se encontraron pesos en {finetuned_path}")
         sys.exit(1)
 
-    print(f"Cargando modelo fine-tuneado: {FINETUNED.name}")
-    model_ft = YOLO(str(FINETUNED))
+    print(f"Cargando modelo fine-tuneado: {finetuned_path}")
+    model_ft = YOLO(str(finetuned_path))
 
     model_base = None
     if args.compare:

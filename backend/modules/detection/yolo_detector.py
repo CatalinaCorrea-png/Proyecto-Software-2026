@@ -4,34 +4,32 @@ from pathlib import Path
 from ultralytics import YOLO
 import time
 
-_FINETUNED_WEIGHTS = Path(__file__).resolve().parents[2] / "yolov8n_aerial.pt"
-_BASE_WEIGHTS      = Path(__file__).resolve().parents[2] / "yolov8n.pt"
+_V2_WEIGHTS = Path(__file__).resolve().parents[2] / "yolov8n_tuned_v2.pt"
+_FALLBACK_WEIGHTS = Path(__file__).resolve().parents[2] / "yolov8n.pt"
 
-# Altitud (metros) a partir de la cual se usa el modelo aéreo
-AERIAL_ALTITUDE_THRESHOLD = 15.0
+CONFIDENCE_THRESHOLD = 0.25
 
 
 class YoloDetector:
-    def __init__(self, model_size: str = "yolov8n"):
-        base_path = str(_BASE_WEIGHTS) if _BASE_WEIGHTS.exists() else f"{model_size}.pt"
-        self.model_base = YOLO(base_path)
-        print(f"Modelo base cargado: {base_path}")
-
-        if _FINETUNED_WEIGHTS.exists():
-            self.model_aerial = YOLO(str(_FINETUNED_WEIGHTS))
-            print(f"Modelo aéreo cargado: {_FINETUNED_WEIGHTS.name}")
+    def __init__(self):
+        if _V2_WEIGHTS.exists():
+            weights_path = _V2_WEIGHTS
         else:
-            self.model_aerial = self.model_base
-            print("Modelo aéreo no encontrado, usando base para ambos modos")
+            print(f"v2 weights no encontrados, usando fallback {_FALLBACK_WEIGHTS.name}")
+            weights_path = _FALLBACK_WEIGHTS
 
+        self.model = YOLO(str(weights_path))
+        self.weights_name = weights_path.name
         self.person_class_id = 0
+        print(f"Modelo cargado: {self.weights_name} (conf={CONFIDENCE_THRESHOLD})")
 
-    def detect(self, frame: np.ndarray, altitude: float = 0.0) -> list[dict]:
-        aerial = altitude >= AERIAL_ALTITUDE_THRESHOLD
-        model = self.model_aerial if aerial else self.model_base
-        conf  = 0.25 if aerial else 0.40
-
-        results = model(frame, verbose=False, conf=conf, classes=[self.person_class_id])
+    def detect(self, frame: np.ndarray) -> list[dict]:
+        results = self.model(
+            frame,
+            verbose=False,
+            conf=CONFIDENCE_THRESHOLD,
+            classes=[self.person_class_id],
+        )
 
         detections = []
         for r in results:
