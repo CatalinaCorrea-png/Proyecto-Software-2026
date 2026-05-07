@@ -11,6 +11,7 @@ __pycache__/
 *.pkl
 # Excepción: modelo fine-tuneado (6.2 MB, entra en GitHub)
 !backend/yolov8n_aerial.pt
+!backend/yolov8n_tuned_v2.pt
 
 # Entorno virtual
 venv/
