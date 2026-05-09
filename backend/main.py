@@ -26,8 +26,7 @@ def shutdown_event():
     if _grabber is not None:
         _grabber.stop()
 
-# Detector de objetos RGB (YOLOv8n), detector térmico (+ simulacion)
-yolo = YoloDetector(model_size="yolov8n")
+yolo = YoloDetector()
 thermal = ThermalDetector()
 thermal_sim = ThermalSimulator()          # ← Simulacion de camara térmica
 # Variables para cooldown de detecciones
@@ -188,6 +187,21 @@ def drone_control(cmd: DroneCommand):
     _last_cmd_time = time.time()
     return {"sent": payload, "target": f"{DRONE_IP}:{DRONE_UDP_PORT}"}
 
+@app.get("/drone/state")
+def get_drone_state():
+    return {
+        "altitude": drone_state.altitude,
+        "model": yolo.weights_name,
+    }
+
+@app.post("/drone/{altitude}")
+def set_altitude(altitude: float):
+    drone_state.altitude = max(0.0, altitude)
+    return {
+        "altitude": drone_state.altitude,
+        "model": yolo.weights_name,
+    }
+
 # Este es el dron. Envía Telemetría GPS, batería, estado.
 @app.websocket("/ws/mission")
 async def mission_websocket(websocket: WebSocket):
@@ -300,6 +314,7 @@ async def detection_websocket(websocket: WebSocket):
                 frame = last_frame if last_frame is not None else \
                     np.random.randint(80, 120, (frame_h, frame_w, 3), dtype=np.uint8)
 
+
             # 2-4. Detección + fusión en thread
             # def process(f):
             #     rgb_dets = yolo.detect(f)
@@ -311,8 +326,9 @@ async def detection_websocket(websocket: WebSocket):
             # def encode(f):
             #     _, buf = cv2.imencode('.jpg', f, [cv2.IMWRITE_JPEG_QUALITY, 70])
             #     return base64.b64encode(buf).decode()
-
-            rgb_detections = await asyncio.to_thread(yolo.detect, frame)
+            
+            # 2. Detección RGB
+            rgb_detections = yolo.detect(frame)
             # rgb_detections, temp_matrix, fused = await asyncio.to_thread(process, frame)
             # frame_b64 = await asyncio.to_thread(encode, frame)
 
