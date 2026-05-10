@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from modules.drone.simulator import simulate_telemetry
@@ -12,8 +12,30 @@ from core.config import CAMERA_SOURCE, CAMERA_INDEX
 from modules.drone.camera import open_camera # se usa el FrameGrabber ahora
 from modules.drone.udp_telemetry import start_udp_listener, hw_watchdog
 import json, cv2, numpy as np, base64, asyncio, time, uuid, socket, threading, requests
+from datetime import datetime, timezone
+from db.database import SessionLocal, init_db
+from db.models import Mission as MissionModel, Detection as DetectionModel, GridCell as GridCellModel
 
 app = FastAPI(title="AeroSearch AI")
+init_db()
+
+# Cerrar misiones que quedaron abiertas por un reinicio abrupto del backend
+def _close_orphan_missions():
+    db = SessionLocal()
+    try:
+        orphans = db.query(MissionModel).filter(MissionModel.status == "active").all()
+        for m in orphans:
+            m.status = "aborted"
+            m.ended_at = datetime.now(timezone.utc)
+            m.detections_count = len(m.detections)
+        if orphans:
+            db.commit()
+            print(f"⚠️  {len(orphans)} misión(es) huérfana(s) marcadas como 'aborted'")
+    finally:
+        db.close()
+
+_close_orphan_missions()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -205,7 +227,7 @@ def set_altitude(altitude: float):
 # Este es el dron. Envía Telemetría GPS, batería, estado.
 @app.websocket("/ws/mission")
 async def mission_websocket(websocket: WebSocket):
-    global _simulation_running
+    global _simulation_running, active_mission_id
     await websocket.accept()
     print("🔌 Misión conectada")
 
@@ -235,6 +257,26 @@ async def mission_websocket(websocket: WebSocket):
         return
 
     _simulation_running = True
+    db = SessionLocal()
+    try:
+        mission = MissionModel(
+            started_at=datetime.now(timezone.utc),
+            initial_battery=drone_state.battery,
+            grid_rows=search_grid.rows,
+            grid_cols=search_grid.cols,
+            grid_center_lat=search_grid.center_lat,
+            grid_center_lng=search_grid.center_lng,
+        )
+        db.add(mission)
+        db.commit()
+        db.refresh(mission)
+        active_mission_id = mission.id
+    except Exception as e:
+        print(f"DB error creating mission: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
     try:
         async for message in simulate_telemetry():
             changed_cells = search_grid.update_position(drone_state.lat, drone_state.lng)
@@ -253,7 +295,39 @@ async def mission_websocket(websocket: WebSocket):
     except WebSocketDisconnect:
         print("❌ Misión desconectada")
     finally:
-        _simulation_running = False  # liberar cuando termina
+        if active_mission_id:
+            db = SessionLocal()
+            try:
+                m = db.query(MissionModel).filter(MissionModel.id == active_mission_id).first()
+                if m:
+                    m.ended_at = datetime.now(timezone.utc)
+                    m.status = "completed"
+                    m.final_battery = round(drone_state.battery, 1)
+                    m.coverage_percent = search_grid.coverage_percent()
+                    m.detections_count = db.query(DetectionModel).filter(
+                        DetectionModel.mission_id == active_mission_id
+                    ).count()
+                    for cell in search_grid.cells.values():
+                        if cell["status"] != "unexplored":
+                            db.add(GridCellModel(
+                                mission_id=active_mission_id,
+                                row=cell["row"],
+                                col=cell["col"],
+                                cell_lat=cell["lat"],
+                                cell_lng=cell["lng"],
+                                status=cell["status"],
+                                explored_at=datetime.fromtimestamp(
+                                    cell["explored_at"] / 1000, tz=timezone.utc
+                                ) if cell["explored_at"] else None,
+                            ))
+                    db.commit()
+            except Exception as e:
+                print(f"DB error closing mission: {e}")
+                db.rollback()
+            finally:
+                db.close()
+        active_mission_id = None
+        _simulation_running = False
 
 # Envia Estado de la grilla
 # Event-driven. No tiene loop propio. Escucha y recibe broadcasts del canal de misión y detección
@@ -288,6 +362,18 @@ def get_grabber() -> FrameGrabber:
 async def detection_websocket(websocket: WebSocket):
     await websocket.accept()
     global last_detection_time
+
+    # Esperar a que mission_websocket cree el registro en DB antes de procesar
+    for _ in range(20):
+        if active_mission_id is not None:
+            break
+        await asyncio.sleep(0.25)
+         
+ #   cap = open_camera()
+
+    # Leer dimensiones reales del frame
+  #  frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) if cap else 640
+  #  frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) if cap else 480
 
     grabber = get_grabber()
     has_camera = grabber._running
@@ -379,6 +465,30 @@ async def detection_websocket(websocket: WebSocket):
                         }
                     }))
 
+                    if active_mission_id:
+                        db = SessionLocal()
+                        try:
+                            db.add(DetectionModel(
+                                id=geo_det["id"],
+                                mission_id=active_mission_id,
+                                timestamp=datetime.fromtimestamp(
+                                    geo_det["position"]["timestamp"] / 1000, tz=timezone.utc
+                                ),
+                                position_lat=geo_det["position"]["lat"],
+                                position_lng=geo_det["position"]["lng"],
+                                position_altitude=geo_det["position"]["altitude"],
+                                confidence=det["confidence"],
+                                source=det["source"],
+                                temperature=det.get("temperature"),
+                                rgb_confidence=det.get("rgb_confidence"),
+                            ))
+                            db.commit()
+                        except Exception as e:
+                            print(f"DB error saving detection: {e}")
+                            db.rollback()
+                        finally:
+                            db.close()
+
             # 6. Encode frames en thread
             # def encode_frames(f, rgb_dets, t_matrix):
             def encode_frame(f, rgb_dets):
@@ -419,3 +529,70 @@ async def detection_websocket(websocket: WebSocket):
 
     except WebSocketDisconnect:
         pass
+
+
+@app.get("/missions")
+def list_missions():
+    db = SessionLocal()
+    try:
+        missions = db.query(MissionModel).order_by(MissionModel.created_at.desc()).all()
+        return [
+            {
+                "id": m.id,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+                "started_at": m.started_at.isoformat() if m.started_at else None,
+                "ended_at": m.ended_at.isoformat() if m.ended_at else None,
+                "status": m.status,
+                "initial_battery": m.initial_battery,
+                "final_battery": m.final_battery,
+                "coverage_percent": m.coverage_percent,
+                "detections_count": len(m.detections),
+                "grid_rows": m.grid_rows,
+                "grid_cols": m.grid_cols,
+                "grid_center_lat": m.grid_center_lat,
+                "grid_center_lng": m.grid_center_lng,
+            }
+            for m in missions
+        ]
+    finally:
+        db.close()
+
+
+@app.get("/missions/{mission_id}")
+def get_mission(mission_id: int):
+    db = SessionLocal()
+    try:
+        m = db.query(MissionModel).filter(MissionModel.id == mission_id).first()
+        if not m:
+            raise HTTPException(status_code=404, detail="Mission not found")
+        return {
+            "id": m.id,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+            "started_at": m.started_at.isoformat() if m.started_at else None,
+            "ended_at": m.ended_at.isoformat() if m.ended_at else None,
+            "status": m.status,
+            "initial_battery": m.initial_battery,
+            "final_battery": m.final_battery,
+            "coverage_percent": m.coverage_percent,
+            "detections_count": m.detections_count,
+            "grid_rows": m.grid_rows,
+            "grid_cols": m.grid_cols,
+            "grid_center_lat": m.grid_center_lat,
+            "grid_center_lng": m.grid_center_lng,
+            "detections": [
+                {
+                    "id": d.id,
+                    "timestamp": d.timestamp.isoformat(),
+                    "position_lat": d.position_lat,
+                    "position_lng": d.position_lng,
+                    "position_altitude": d.position_altitude,
+                    "confidence": d.confidence,
+                    "source": d.source,
+                    "temperature": d.temperature,
+                    "rgb_confidence": d.rgb_confidence,
+                }
+                for d in m.detections
+            ],
+        }
+    finally:
+        db.close()
