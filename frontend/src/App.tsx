@@ -1,61 +1,69 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Dashboard } from './pages/Dashboard'
 import { MissionsHistory } from './pages/MissionsHistory'
+import GalleryPage from './pages/GalleryPage'
+import { useWebSocket } from './hooks/useWebSocket'
+import { useMission } from './hooks/useMission'
+import type { Detection } from './types'
+import './App.css'
 
-type View = 'dashboard' | 'history'
+type View = 'dashboard' | 'history' | 'gallery'
 
 function App() {
   const [view, setView] = useState<View>('dashboard')
 
+  const { lastMessage, isConnected } = useWebSocket('ws://localhost:8000/ws/mission')
+  const { telemetry, trail } = useMission(lastMessage)
+  const [mapDetections, setMapDetections] = useState<Detection[]>([])
+
+  const handleNewDetection = useCallback((detection: Detection) => {
+    if (detection.confidence === 'low') return
+    setMapDetections(prev => [detection, ...prev].slice(0, 10))
+  }, [])
+
+  const [galleryMissionFilter, setGalleryMissionFilter] = useState('')
+
+  const handleViewGallery = useCallback((missionId: string) => {
+    setGalleryMissionFilter(missionId)
+    setView('gallery')
+  }, [])
+
+  const labels: Record<View, string> = { dashboard: 'Dashboard', history: 'Historial', gallery: 'Galería' }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0A0E1A' }}>
-
-      {/* ── Barra de navegación ── */}
-      <nav style={{
-        display: 'flex', alignItems: 'center', gap: 4,
-        padding: '0 16px', height: 44, flexShrink: 0,
-        borderBottom: '1px solid #1E2D3D',
-        background: '#0D1B2A',
-      }}>
-        <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#FF6D00', fontSize: 14, marginRight: 16 }}>
-          AeroSearch AI
-        </span>
-
-        {(['dashboard', 'history'] as View[]).map(v => {
-          const labels: Record<View, string> = { dashboard: 'Dashboard', history: 'Historial' }
-          const active = view === v
-          return (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              style={{
-                background: 'none',
-                border: 'none',
-                borderBottom: active ? '2px solid #FF6D00' : '2px solid transparent',
-                color: active ? '#FF6D00' : '#546E7A',
-                fontFamily: 'monospace',
-                fontSize: 13,
-                padding: '0 12px',
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'color .2s',
-              }}
-            >
-              {labels[v]}
-            </button>
-          )
-        })}
+    <div className="app">
+      <nav className="app-nav">
+        <span className="app-nav__brand">AeroSearch AI</span>
+        {(['dashboard', 'history', 'gallery'] as View[]).map(v => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`app-nav__btn${view === v ? ' app-nav__btn--active' : ''}`}
+          >
+            {labels[v]}
+          </button>
+        ))}
       </nav>
 
-      {/* ── Contenido ── */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div className="app-content">
         {/* Dashboard siempre montado para mantener los WebSockets activos */}
-        <div style={{ flex: 1, minHeight: 0, display: view === 'dashboard' ? 'flex' : 'none', flexDirection: 'column' }}>
-          <Dashboard />
+        <div className={`app-view${view !== 'dashboard' ? ' app-view--hidden' : ''}`}>
+          <Dashboard
+            lastMessage={lastMessage}
+            isConnected={isConnected}
+            telemetry={telemetry}
+            trail={trail}
+            mapDetections={mapDetections}
+            onNewDetection={handleNewDetection}
+          />
         </div>
-        {view === 'history' && <MissionsHistory />}
+        {view === 'history' && <MissionsHistory onViewGallery={handleViewGallery} />}
+        {view === 'gallery' && (
+          <div className="app-view app-content--scrollable">
+            <GalleryPage initialMissionFilter={galleryMissionFilter} />
+          </div>
+        )}
       </div>
-
     </div>
   )
 }

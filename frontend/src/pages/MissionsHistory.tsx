@@ -127,7 +127,11 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function MissionCard({ mission, onSelect }: { mission: Mission; onSelect: () => void }) {
+function MissionCard({ mission, onSelect, onViewGallery }: {
+  mission: Mission
+  onSelect: () => void
+  onViewGallery?: (missionId: string) => void
+}) {
   const [zoneName, setZoneName] = useState<string>('…')
 
   useEffect(() => {
@@ -203,8 +207,26 @@ function MissionCard({ mission, onSelect }: { mission: Mission; onSelect: () => 
 
       <CoverageBar value={mission.coverage_percent} />
 
-      <div style={{ fontSize: 11, color: '#546E7A', textAlign: 'right' }}>
-        Ver detalle →
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: '#546E7A' }}>Ver detalle →</span>
+        {onViewGallery && (
+          <button
+            onClick={e => { e.stopPropagation(); onViewGallery(String(mission.id)) }}
+            style={{
+              background: 'rgba(255,109,0,0.1)',
+              border: '1px solid rgba(255,109,0,0.35)',
+              color: '#FF6D00',
+              borderRadius: 4,
+              padding: '3px 10px',
+              fontSize: 10,
+              fontFamily: 'monospace',
+              cursor: 'pointer',
+              letterSpacing: 0.5,
+            }}
+          >
+            ◎ Ver imágenes
+          </button>
+        )}
       </div>
     </div>
   )
@@ -247,10 +269,11 @@ function DetectionRow({ det }: { det: MissionDetail['detections'][number] }) {
   )
 }
 
-function MissionDetailPanel({ missionId, onClose, fetchDetail }: {
+function MissionDetailPanel({ missionId, onClose, fetchDetail, onViewGallery }: {
   missionId: number
   onClose: () => void
   fetchDetail: (id: number) => Promise<MissionDetail | null>
+  onViewGallery?: (missionId: string) => void
 }) {
   const [detail, setDetail] = useState<MissionDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -290,15 +313,31 @@ function MissionDetailPanel({ missionId, onClose, fetchDetail }: {
               </span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none', border: '1px solid #37474F', color: '#78909C',
-              borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 13,
-            }}
-          >
-            Cerrar
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {onViewGallery && (
+              <button
+                onClick={() => { onViewGallery(String(missionId)); onClose() }}
+                style={{
+                  background: 'rgba(255,109,0,0.12)',
+                  border: '1px solid rgba(255,109,0,0.4)',
+                  color: '#FF6D00',
+                  borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12,
+                  fontFamily: 'monospace',
+                }}
+              >
+                ◎ Ver imágenes
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none', border: '1px solid #37474F', color: '#78909C',
+                borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 13,
+              }}
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
 
         {loading && (
@@ -348,7 +387,7 @@ function MissionDetailPanel({ missionId, onClose, fetchDetail }: {
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
-export function MissionsHistory() {
+export function MissionsHistory({ onViewGallery }: { onViewGallery?: (missionId: string) => void }) {
   const { missions, loading, refetch, fetchDetail } = useMissions()
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
@@ -391,13 +430,13 @@ export function MissionsHistory() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 16 }}>
           {missions.map(m => (
-            <MissionCard key={m.id} mission={m} onSelect={() => setSelectedId(m.id)} />
+            <MissionCard key={m.id} mission={m} onSelect={() => setSelectedId(m.id)} onViewGallery={onViewGallery} />
           ))}
         </div>
       )}
 
       {selectedId !== null && (
-        <MissionDetailPanel missionId={selectedId} onClose={() => setSelectedId(null)} fetchDetail={fetchDetail} />
+        <MissionDetailPanel missionId={selectedId} onClose={() => setSelectedId(null)} fetchDetail={fetchDetail} onViewGallery={onViewGallery} />
       )}
     </div>
   )

@@ -44,3 +44,5 @@ datasets/
 
 # juju
 .claude/
+
+.vscode/ipch
