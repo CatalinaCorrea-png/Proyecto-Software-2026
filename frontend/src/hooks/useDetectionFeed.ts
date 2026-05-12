@@ -19,7 +19,12 @@ interface DetectionEvent {
   data: Detection
 }
 
-type DetectionMessage = FramePayload | DetectionEvent
+interface DetectionHistory {
+  type: 'detection_history'
+  data: Detection[]
+}
+
+type DetectionMessage = FramePayload | DetectionEvent | DetectionHistory
 
 interface UseDetectionFeedReturn {
   framePayload: FramePayload | null
@@ -61,8 +66,11 @@ export function useDetectionFeed(url: string): UseDetectionFeedReturn {
           setFramePayload(msg)
         }
 
+        if (msg.type === 'detection_history') {
+          setDetections(msg.data)
+        }
+
         if (msg.type === 'detection') {
-          // Acumular en la lista para el mapa — máximo 100
           setDetections(prev => [msg.data, ...prev].slice(0, 100))
         }
       }

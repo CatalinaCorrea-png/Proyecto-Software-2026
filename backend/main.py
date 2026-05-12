@@ -1,17 +1,18 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from modules.drone.simulator import simulate_telemetry
+from modules.drone.simulator import get_current_telemetry
 from modules.detection.yolo_detector import YoloDetector
 from modules.detection.thermal_detector import ThermalDetector
 from modules.detection.thermal_simulator import ThermalSimulator
 from modules.detection.fusion import fuse_detections
-from core.state import drone_state, search_grid
+from core.state import drone_state, search_grid, BASE_LAT, BASE_LNG
+from modules.mapping.grid import CELL_LAT, CELL_LNG, CELL_SIZE_METERS
 from core.config import DRONE_IP, DRONE_UDP_PORT, DRONE_UDP_TX_PORT
 from core.config import CAMERA_SOURCE, CAMERA_INDEX
 from modules.drone.camera import open_camera # se usa el FrameGrabber ahora
 from modules.drone.udp_telemetry import start_udp_listener, hw_watchdog
-import json, cv2, numpy as np, base64, asyncio, time, uuid, socket, threading, requests
+import json, cv2, numpy as np, base64, asyncio, time, uuid, socket, threading, requests, math
 
 app = FastAPI(title="AeroSearch AI")
 app.add_middleware(
@@ -35,9 +36,11 @@ last_detection_time = 0.0
 DETECTION_COOLDOWN = 3.0
 # Lista de clientes WebSocket conectados a la grilla para enviar actualizaciones en tiempo real
 grid_clients: list[WebSocket] = []
+# Historial de detecciones para replay al reconectar
+detection_history: list[dict] = []
 
-# Variable global para trackear si ya hay una simulación corriendo
-_simulation_running = False
+# Tarea de simulación en background
+_simulation_task: asyncio.Task | None = None
 
 class DroneCommand(BaseModel):
     throttle: int = 0   # 0-255 (PWM directo al motor)
@@ -188,58 +191,156 @@ def drone_control(cmd: DroneCommand):
     _last_cmd_time = time.time()
     return {"sent": payload, "target": f"{DRONE_IP}:{DRONE_UDP_PORT}"}
 
+@app.post("/drone/reverse")
+def drone_reverse():
+    drone_state.sim_direction *= -1
+    return {"direction": drone_state.sim_direction}
+
 # Este es el dron. Envía Telemetría GPS, batería, estado.
 @app.websocket("/ws/mission")
 async def mission_websocket(websocket: WebSocket):
-    global _simulation_running
+    global _simulation_task
     await websocket.accept()
     print("🔌 Misión conectada")
 
-    # Si ya hay una simulación corriendo, no arrancar otra
-    if _simulation_running:
-        print("⚠️  Simulación ya en curso, usando estado existente")
-        try:
-            while True:
-                # Solo mandar el estado actual sin re-simular
-                await websocket.send_text(json.dumps({
-                    "type": "telemetry",
-                    "data": {
-                        "position": {
-                            "lat": drone_state.lat,
-                            "lng": drone_state.lng,
-                            "altitude": drone_state.altitude,
-                            "timestamp": int(time.time() * 1000)
-                        },
-                        "battery": round(drone_state.battery, 1),
-                        "status": drone_state.status,
-                        "speed": 5.0
-                    }
-                }))
-                await asyncio.sleep(1)
-        except WebSocketDisconnect:
-            print("❌ Cliente secundario desconectado")
-        return
+    # Arrancar simulación en background si no está corriendo
+    if _simulation_task is None or _simulation_task.done():
+        drone_state.mission_start = time.time()
+        drone_state.sim_step = 0
+        drone_state.battery = 100.0
+        drone_state.status = "idle"
+        _simulation_task = asyncio.create_task(_simulation_with_grid())
 
-    _simulation_running = True
+    # Streamear telemetría al cliente (independiente de la simulación)
     try:
-        async for message in simulate_telemetry():
-            changed_cells = search_grid.update_position(drone_state.lat, drone_state.lng)
-            if changed_cells and grid_clients:
-                grid_update = {
-                    "type": "grid_update",
-                    "cells": changed_cells,
-                    "coverage": search_grid.coverage_percent()
-                }
-                for client in grid_clients.copy():
-                    try:
-                        await client.send_text(json.dumps(grid_update))
-                    except Exception:
-                        grid_clients.remove(client)
+        while True:
+            message = get_current_telemetry()
             await websocket.send_text(json.dumps(message))
+            await asyncio.sleep(1)
     except WebSocketDisconnect:
-        print("❌ Misión desconectada")
-    finally:
-        _simulation_running = False  # liberar cuando termina
+        print("❌ Misión desconectada (simulación sigue corriendo)")
+
+
+def _snap_step_to_position(spc: int, cols: int, steps_per_cycle: int) -> int:
+    """Calcula el sim_step más cercano a la posición actual del dron."""
+    row_f = (drone_state.lat - BASE_LAT) / CELL_LAT - 0.5
+    row = max(0, round(row_f))
+
+    if row % 2 == 0:
+        col_f = (drone_state.lng - BASE_LNG) / CELL_LNG - 0.5
+    else:
+        col_f = (cols - 0.5) - (drone_state.lng - BASE_LNG) / CELL_LNG
+
+    col_f = max(0.0, min(col_f, cols - 1.0))
+    pos_h = min(int(col_f * spc), (cols - 1) * spc - 1)
+
+    return row * steps_per_cycle + max(0, pos_h)
+
+
+async def _simulation_with_grid():
+    """Wrapper que corre la simulación y actualiza la grilla."""
+    spc = int(CELL_SIZE_METERS / 5.0)
+    cols = search_grid.cols
+    steps_horizontal = (cols - 1) * spc
+    steps_vertical = spc
+    steps_per_cycle = steps_horizontal + steps_vertical
+
+    drone_state.mission_active = True
+    was_manual = False
+
+    while drone_state.mission_active:
+        elapsed = int(time.time() - drone_state.mission_start)
+
+        if drone_state.battery <= 0:
+            drone_state.status = "landed"
+            drone_state.mission_active = False
+            return
+
+        if drone_state.real_telemetry_active:
+            source = "hardware"
+            current_speed = 5.0
+            was_manual = True
+        elif drone_state.cmd_throttle > 0:
+            thrust = drone_state.cmd_throttle / 255.0
+            pitch_norm = drone_state.cmd_pitch / 100.0
+            roll_norm = drone_state.cmd_roll / 100.0
+
+            speed_mps = thrust * 10.0
+            drone_state.lat += (speed_mps * pitch_norm) / 111_000
+            cos_lat = max(math.cos(math.radians(drone_state.lat)), 0.01)
+            drone_state.lng += (speed_mps * roll_norm) / (111_000 * cos_lat)
+
+            magnitude = min(math.sqrt(pitch_norm**2 + roll_norm**2), 1.0)
+            source = "manual"
+            current_speed = round(speed_mps * magnitude, 1)
+            was_manual = True
+        else:
+            source = "sim"
+            if was_manual:
+                drone_state.sim_step = _snap_step_to_position(spc, cols, steps_per_cycle)
+                was_manual = False
+
+            step = drone_state.sim_step
+            row = step // steps_per_cycle
+            pos_in_cycle = step % steps_per_cycle
+
+            if pos_in_cycle < steps_horizontal:
+                frac = pos_in_cycle / spc
+                lat = BASE_LAT + (row + 0.5) * CELL_LAT
+                if row % 2 == 0:
+                    lng = BASE_LNG + (0.5 + frac) * CELL_LNG
+                else:
+                    lng = BASE_LNG + (cols - 0.5 - frac) * CELL_LNG
+            else:
+                v_frac = (pos_in_cycle - steps_horizontal + 1) / spc
+                lat = BASE_LAT + (row + 0.5 + v_frac) * CELL_LAT
+                if row % 2 == 0:
+                    lng = BASE_LNG + (cols - 0.5) * CELL_LNG
+                else:
+                    lng = BASE_LNG + 0.5 * CELL_LNG
+
+            drone_state.lat = lat
+            drone_state.lng = lng
+            drone_state.sim_step = max(0, drone_state.sim_step + drone_state.sim_direction)
+            current_speed = 5.0
+
+        drone_state.battery = max(0, drone_state.battery - 0.05)
+        drone_state.status = "flying"
+        drone_state.last_update = time.time()
+
+        # Actualizar grilla
+        changed_cells = search_grid.update_position(drone_state.lat, drone_state.lng)
+        if changed_cells and grid_clients:
+            grid_update = {
+                "type": "grid_update",
+                "cells": changed_cells,
+                "coverage": search_grid.coverage_percent()
+            }
+            for client in grid_clients.copy():
+                try:
+                    await client.send_text(json.dumps(grid_update))
+                except Exception:
+                    grid_clients.remove(client)
+
+        # Guardar último mensaje de telemetría
+        drone_state._last_telemetry = {
+            "type": "telemetry",
+            "data": {
+                "position": {
+                    "lat": drone_state.lat,
+                    "lng": drone_state.lng,
+                    "altitude": drone_state.altitude,
+                    "timestamp": int(time.time() * 1000)
+                },
+                "battery": round(drone_state.battery, 1),
+                "status": "flying",
+                "speed": current_speed,
+                "elapsed": elapsed,
+                "source": source,
+            }
+        }
+
+        await asyncio.sleep(1)
 
 # Envia Estado de la grilla
 # Event-driven. No tiene loop propio. Escucha y recibe broadcasts del canal de misión y detección
@@ -274,6 +375,12 @@ def get_grabber() -> FrameGrabber:
 async def detection_websocket(websocket: WebSocket):
     await websocket.accept()
     global last_detection_time
+
+    if detection_history:
+        await websocket.send_text(json.dumps({
+            "type": "detection_history",
+            "data": detection_history
+        }))
 
     grabber = get_grabber()
     has_camera = grabber._running
@@ -351,16 +458,18 @@ async def detection_websocket(websocket: WebSocket):
                             }))
                             for client in grid_clients.copy()
                         ])
+                    det_msg = {
+                        "id": geo_det["id"],
+                        "position": geo_det["position"],
+                        "confidence": conf_label,
+                        "source": det["source"],
+                        "temperature": det.get("temperature"),
+                        "timestamp": int(time.time() * 1000)
+                    }
+                    detection_history.append(det_msg)
                     await websocket.send_text(json.dumps({
                         "type": "detection",
-                        "data": {
-                            "id": geo_det["id"],
-                            "position": geo_det["position"],
-                            "confidence": conf_label,
-                            "source": det["source"],
-                            "temperature": det.get("temperature"),
-                            "timestamp": int(time.time() * 1000)
-                        }
+                        "data": det_msg
                     }))
 
             # 6. Encode frames en thread

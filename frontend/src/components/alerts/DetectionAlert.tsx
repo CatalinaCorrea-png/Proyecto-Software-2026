@@ -9,12 +9,12 @@ export function DetectionAlert({ detections }: Props) {
     <div style={{
       background: '#0D1B2A',
       border: '1px solid #1E3A5F',
-      borderRadius: '8px',
-      padding: '12px',
+      borderRadius: '6px',
+      padding: '8px',
       display: 'flex',
       flexDirection: 'column',
-      gap: 8,
-      height: '90vh',
+      gap: 6,
+      height: '100%',
       minHeight: 0,
       overflow: 'hidden'
     }}>

@@ -23,6 +23,9 @@ class DroneState:
     cmd_throttle: int = 0
     cmd_pitch: int = 0
     cmd_roll: int = 0
+    sim_step: int = 0
+    sim_direction: int = 1
+    mission_active: bool = False
 
 drone_state = DroneState()
 

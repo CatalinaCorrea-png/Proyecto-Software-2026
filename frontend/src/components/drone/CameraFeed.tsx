@@ -11,14 +11,14 @@ type ViewMode = 'rgb' | 'overlay' | 'thermal'
 export function CameraFeed({ onNewDetection }: Props) {
   const { framePayload, detections, isConnected } = useDetectionFeed('ws://localhost:8000/ws/detection')
   const [viewMode, setViewMode] = useState<ViewMode>('rgb')
-  const lastDetectionRef = useRef<string | null>(null)
+  const forwardedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
-    if (detections.length === 0) return
-    const latest = detections[0]
-    if (latest.id !== lastDetectionRef.current) {
-      lastDetectionRef.current = latest.id
-      onNewDetection?.(latest)
+    for (const det of detections) {
+      if (!forwardedRef.current.has(det.id)) {
+        forwardedRef.current.add(det.id)
+        onNewDetection?.(det)
+      }
     }
   }, [detections, onNewDetection])
 
@@ -30,12 +30,12 @@ export function CameraFeed({ onNewDetection }: Props) {
     <div style={{
       background: '#0D1B2A',
       border: '1px solid #1E3A5F',
-      borderRadius: '8px',
-      padding: '12px',
+      borderRadius: '6px',
+      padding: '8px',
       display: 'flex',
       flexDirection: 'column',
-      gap: 8,
-      minHeight: 0
+      gap: 6,
+      minHeight: 0,
     }}>
 
       {/* Header */}
@@ -91,7 +91,7 @@ export function CameraFeed({ onNewDetection }: Props) {
             }`}
             style={{
               width: '100%', height: 'auto',
-              objectFit: 'cover', display: 'block',
+              display: 'block',
               imageRendering: viewMode === 'thermal' ? 'pixelated' : 'auto'
             }}
             alt="camera feed"

@@ -21,14 +21,14 @@ export function Dashboard() {
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '1fr .5fr .5fr',
+      gridTemplateColumns: '1fr 0.45fr 0.35fr',
       gridTemplateRows: '100vh',
       width: '100vw',
       height: '100vh',
       overflow: 'hidden',
       background: '#0A0E1A',
-      gap: 10,
-      padding: 10,
+      gap: 6,
+      padding: 6,
     }}>
 
       {/* ── Mapa — ocupa todo el alto ── */}
@@ -38,22 +38,21 @@ export function Dashboard() {
         trail={trail}
       />
 
-      {/* ── Panel telemetria, camara y control ── */}
+      {/* ── Panel misión: telemetría + cámara ── */}
       <div style={{
-        display: 'grid',
-        gridTemplateRows: 'auto auto auto auto',
-        gap: 10,
-        alignContent: 'start',
-        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
         minHeight: 0,
+        overflowY: 'auto',
       }}>
 
         {/* Header */}
-        <div style={{ color: 'white', fontFamily: 'monospace' }}>
-          <div style={{ fontSize: 22, fontWeight: 'bold', color: '#FF6D00' }}>
+        <div style={{ color: 'white', fontFamily: 'monospace', padding: '4px 0' }}>
+          <div style={{ fontSize: 16, fontWeight: 'bold', color: '#FF6D00' }}>
             AeroSearch AI
           </div>
-          <div style={{ fontSize: 11, color: '#78909C' }}>
+          <div style={{ fontSize: 10, color: '#78909C' }}>
             Sistema de búsqueda y rescate
           </div>
         </div>
@@ -68,27 +67,26 @@ export function Dashboard() {
         {/* Cámara */}
         <CameraFeed onNewDetection={handleNewDetection} />
 
-        {/* Control de vuelo */}
+      </div>
+
+      {/* ── Panel alertas + control de vuelo ── */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+        minHeight: 0,
+        overflow: 'hidden',
+      }}>
+
+        {/* Alertas — ocupa el espacio disponible */}
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <DetectionAlert detections={mapDetections} />
+        </div>
+
+        {/* Control de vuelo — tamaño fijo abajo */}
         <DroneController />
 
       </div>
-
-      {/* ── Panel alertas ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateRows: 'auto',
-        gap: 10,
-        alignContent: 'center',
-        overflowY: 'auto',
-        minHeight: 0,
-        // height: '100vh'
-      }}>
-
-        {/* ──  Alertas — detecciones del mapa ── */}
-        <DetectionAlert detections={mapDetections} />
-
-      </div>
-
 
     </div>
   )
