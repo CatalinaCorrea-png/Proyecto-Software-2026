@@ -1,23 +1,26 @@
-import { useCallback, useState } from 'react'
 import { SearchMap } from '../components/map/SearchMap'
 import { TelemetryPanel } from '../components/drone/TelemetryPanel'
 import { DetectionAlert } from '../components/alerts/DetectionAlert'
 import { CameraFeed } from '../components/drone/CameraFeed'
 import { DroneController } from '../components/drone/DroneController'
-import { useWebSocket } from '../hooks/useWebSocket'
-import { useMission } from '../hooks/useMission'
-import type { Detection } from '../types'
+import type { Detection, DroneTelemetry, WsMessage } from '../types'
 
-export function Dashboard() {
-  const { lastMessage, isConnected } = useWebSocket('ws://localhost:8000/ws/mission')
-  const { telemetry, trail } = useMission(lastMessage)
-  const [mapDetections, setMapDetections] = useState<Detection[]>([])
+interface DashboardProps {
+  lastMessage: WsMessage | null
+  isConnected: boolean
+  telemetry: DroneTelemetry | null
+  trail: Array<{ lat: number; lng: number }>
+  mapDetections: Detection[]
+  onNewDetection: (detection: Detection) => void
+}
 
-  const handleNewDetection = useCallback((detection: Detection) => {
-    if (detection.confidence === 'low') return
-    setMapDetections(prev => [detection, ...prev].slice(0, 10))
-  }, [])
-
+export function Dashboard({
+  isConnected,
+  telemetry,
+  trail,
+  mapDetections,
+  onNewDetection,
+}: DashboardProps) {
   return (
     <div style={{
       display: 'grid',
@@ -65,7 +68,7 @@ export function Dashboard() {
         />
 
         {/* Cámara */}
-        <CameraFeed onNewDetection={handleNewDetection} />
+        <CameraFeed onNewDetection={onNewDetection} />
 
       </div>
 

@@ -1,29 +1,34 @@
 import cv2
 import numpy as np
+from pathlib import Path
 from ultralytics import YOLO
 import time
 
+_V2_WEIGHTS = Path(__file__).resolve().parents[2] / "yolov8n_tuned_v2.pt"
+_FALLBACK_WEIGHTS = Path(__file__).resolve().parents[2] / "yolov8n.pt"
+
+CONFIDENCE_THRESHOLD = 0.25
+
+
 class YoloDetector:
-    def __init__(self, model_size: str = "yolov8n"):
-        """
-        model_size opciones: yolov8n (rápido), yolov8s (balance), yolov8m (preciso)
-        La primera vez descarga el modelo automáticamente (~6MB para nano)
-        """
-        print(f"🧠 Cargando modelo {model_size}...")
-        self.model = YOLO(f"{model_size}.pt")
-        self.person_class_id = 0  # en COCO dataset, clase 0 = persona
-        print("✅ Modelo listo")
+    def __init__(self):
+        if _V2_WEIGHTS.exists():
+            weights_path = _V2_WEIGHTS
+        else:
+            print(f"v2 weights no encontrados, usando fallback {_FALLBACK_WEIGHTS.name}")
+            weights_path = _FALLBACK_WEIGHTS
+
+        self.model = YOLO(str(weights_path))
+        self.weights_name = weights_path.name
+        self.person_class_id = 0
+        print(f"Modelo cargado: {self.weights_name} (conf={CONFIDENCE_THRESHOLD})")
 
     def detect(self, frame: np.ndarray) -> list[dict]:
-        """
-        Recibe un frame (numpy array BGR de OpenCV)
-        Retorna lista de detecciones de personas
-        """
         results = self.model(
-            source=frame,
-            verbose=False,   # no imprimir en consola cada frame
-            conf=0.4,        # confianza mínima 40%
-            classes=[self.person_class_id]  # solo buscar personas
+            frame,
+            verbose=False,
+            conf=CONFIDENCE_THRESHOLD,
+            classes=[self.person_class_id],
         )
 
         detections = []
@@ -31,13 +36,12 @@ class YoloDetector:
             for box in r.boxes:
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
                 confidence = float(box.conf[0])
-
                 detections.append({
                     "bbox": {
                         "x1": int(x1), "y1": int(y1),
                         "x2": int(x2), "y2": int(y2),
-                        "cx": int((x1 + x2) / 2),  # centro X
-                        "cy": int((y1 + y2) / 2),  # centro Y
+                        "cx": int((x1 + x2) / 2),
+                        "cy": int((y1 + y2) / 2),
                     },
                     "confidence": confidence,
                     "source": "rgb",

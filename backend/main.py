@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from modules.drone.simulator import get_current_telemetry
@@ -10,11 +10,50 @@ from core.state import drone_state, search_grid, BASE_LAT, BASE_LNG
 from modules.mapping.grid import CELL_LAT, CELL_LNG, CELL_SIZE_METERS
 from core.config import DRONE_IP, DRONE_UDP_PORT, DRONE_UDP_TX_PORT
 from core.config import CAMERA_SOURCE, CAMERA_INDEX
-from modules.drone.camera import open_camera # se usa el FrameGrabber ahora
+from modules.drone.camera import open_camera
 from modules.drone.udp_telemetry import start_udp_listener, hw_watchdog
+from contextlib import asynccontextmanager
+from db.mongodb import connect as mongo_connect, disconnect as mongo_disconnect
+from routers.images import router as images_router
+from routers.missions_mongo import router as missions_mongo_router
+from modules.storage.image_service import save_image
+from modules.storage.schemas import (ImageUploadRequest, DetectionPayload, BoundingBox,)
+from datetime import datetime as _dt
 import json, cv2, numpy as np, base64, asyncio, time, uuid, socket, threading, requests, math
+from datetime import datetime, timezone
+from db.database import SessionLocal, init_db
+from db.models import Mission as MissionModel, Detection as DetectionModel, GridCell as GridCellModel
 
-app = FastAPI(title="AeroSearch AI")
+init_db()
+
+def _close_orphan_missions():
+    db = SessionLocal()
+    try:
+        orphans = db.query(MissionModel).filter(MissionModel.status == "active").all()
+        for m in orphans:
+            m.status = "aborted"
+            m.ended_at = datetime.now(timezone.utc)
+            m.detections_count = len(m.detections)
+        if orphans:
+            db.commit()
+            print(f"⚠️  {len(orphans)} misión(es) huérfana(s) marcadas como 'aborted'")
+    finally:
+        db.close()
+
+_close_orphan_missions()
+
+@asynccontextmanager
+async def lifespan(app):
+    await mongo_connect()
+    await start_udp_listener(DRONE_UDP_TX_PORT)
+    asyncio.create_task(hw_watchdog())
+    asyncio.create_task(_keepalive_loop())
+    yield
+    if _grabber is not None:
+        _grabber.stop()
+    await mongo_disconnect()
+
+app = FastAPI(title="AeroSearch AI", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,46 +61,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("shutdown")
-def shutdown_event():
-    if _grabber is not None:
-        _grabber.stop()
+app.include_router(images_router)
+app.include_router(missions_mongo_router)
 
-# Detector de objetos RGB (YOLOv8n), detector térmico (+ simulacion)
-yolo = YoloDetector(model_size="yolov8n")
+yolo = YoloDetector()
 thermal = ThermalDetector()
-thermal_sim = ThermalSimulator()          # ← Simulacion de camara térmica
-# Variables para cooldown de detecciones
+thermal_sim = ThermalSimulator()
 last_detection_time = 0.0
 DETECTION_COOLDOWN = 3.0
-# Lista de clientes WebSocket conectados a la grilla para enviar actualizaciones en tiempo real
 grid_clients: list[WebSocket] = []
-# Historial de detecciones para replay al reconectar
 detection_history: list[dict] = []
 
-# Tarea de simulación en background
 _simulation_task: asyncio.Task | None = None
+active_mission_id: int | None = None
 
 class DroneCommand(BaseModel):
-    throttle: int = 0   # 0-255 (PWM directo al motor)
-    yaw: int = 0        # -100 a 100
-    pitch: int = 0      # -100 a 100
-    roll: int = 0       # -100 a 100
+    throttle: int = 0
+    yaw: int = 0
+    pitch: int = 0
+    roll: int = 0
 
 _udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 _last_cmd_time: float = 0.0
 
 
-@app.on_event("startup")
-async def startup():
-    await start_udp_listener(DRONE_UDP_TX_PORT)
-    asyncio.create_task(hw_watchdog())
-    asyncio.create_task(_keepalive_loop())
-
-
 async def _keepalive_loop():
-    """Envía T:0,Y:0,P:0,R:0 al ESP32 cada 2s si no hubo comandos recientes.
-    Esto establece nuestra IP como destino para la telemetría periódica."""
     while True:
         await asyncio.sleep(2.0)
         if time.time() - _last_cmd_time > 3.0:
@@ -72,7 +96,6 @@ async def _keepalive_loop():
 
 
 class FrameGrabber:
-    """Lee frames en un hilo dedicado. Usa requests para MJPEG (ESP32) y cv2 para cámaras locales."""
     def __init__(self):
         self._cap: cv2.VideoCapture | None = None
         self._stream_url: str | None = None
@@ -90,17 +113,14 @@ class FrameGrabber:
             print("📷 Modo sintético")
             return False
 
-        # URL = stream MJPEG (ESP32-CAM), parsear con requests
         if isinstance(source, str):
             self._stream_url = source
             self._running = True
             self._thread = threading.Thread(target=self._mjpeg_reader_loop, daemon=True)
             self._thread.start()
-            # No esperar — el hilo sigue intentando en background
             print(f"✅ Cámara: {CAMERA_SOURCE} (url: {source}) — conectando...")
             return True
 
-        # Cámara local con cv2
         cap = cv2.VideoCapture(source, cv2.CAP_DSHOW if use_dshow else cv2.CAP_ANY)
         if not cap.isOpened():
             print(f"⚠️ No se pudo abrir {CAMERA_SOURCE}, usando sintético")
@@ -121,7 +141,6 @@ class FrameGrabber:
         return True
 
     def _mjpeg_reader_loop(self):
-        """Parsea el stream MJPEG del ESP32-CAM frame a frame."""
         while self._running:
             try:
                 resp = requests.get(self._stream_url, stream=True, timeout=10)
@@ -130,15 +149,13 @@ class FrameGrabber:
                     if not self._running:
                         break
                     buf += chunk
-                    # Buscar JPEG completo: FF D8 (inicio) hasta FF D9 (fin)
                     while True:
                         start = buf.find(b'\xff\xd8')
                         if start == -1:
-                            buf = b''  # descartar basura sin inicio JPEG
+                            buf = b''
                             break
                         end = buf.find(b'\xff\xd9', start)
                         if end == -1:
-                            # Todavía no llegó el fin, recortar basura anterior
                             buf = buf[start:]
                             break
                         jpg = buf[start:end + 2]
@@ -173,7 +190,6 @@ class FrameGrabber:
         if self._cap:
             self._cap.release()
             self._cap = None
-            self._cap = None
 
 @app.get("/")
 def health():
@@ -196,22 +212,55 @@ def drone_reverse():
     drone_state.sim_direction *= -1
     return {"direction": drone_state.sim_direction}
 
-# Este es el dron. Envía Telemetría GPS, batería, estado.
+@app.get("/drone/state")
+def get_drone_state():
+    return {
+        "altitude": drone_state.altitude,
+        "model": yolo.weights_name,
+    }
+
+@app.post("/drone/{altitude}")
+def set_altitude(altitude: float):
+    drone_state.altitude = max(0.0, altitude)
+    return {
+        "altitude": drone_state.altitude,
+        "model": yolo.weights_name,
+    }
+
 @app.websocket("/ws/mission")
 async def mission_websocket(websocket: WebSocket):
-    global _simulation_task
+    global _simulation_task, active_mission_id
     await websocket.accept()
     print("🔌 Misión conectada")
 
-    # Arrancar simulación en background si no está corriendo
     if _simulation_task is None or _simulation_task.done():
         drone_state.mission_start = time.time()
         drone_state.sim_step = 0
         drone_state.battery = 100.0
         drone_state.status = "idle"
+
+        db = SessionLocal()
+        try:
+            mission = MissionModel(
+                started_at=datetime.now(timezone.utc),
+                initial_battery=drone_state.battery,
+                grid_rows=search_grid.rows,
+                grid_cols=search_grid.cols,
+                grid_center_lat=search_grid.center_lat,
+                grid_center_lng=search_grid.center_lng,
+            )
+            db.add(mission)
+            db.commit()
+            db.refresh(mission)
+            active_mission_id = mission.id
+        except Exception as e:
+            print(f"DB error creating mission: {e}")
+            db.rollback()
+        finally:
+            db.close()
+
         _simulation_task = asyncio.create_task(_simulation_with_grid())
 
-    # Streamear telemetría al cliente (independiente de la simulación)
     try:
         while True:
             message = get_current_telemetry()
@@ -222,7 +271,6 @@ async def mission_websocket(websocket: WebSocket):
 
 
 def _snap_step_to_position(spc: int, cols: int, steps_per_cycle: int) -> int:
-    """Calcula el sim_step más cercano a la posición actual del dron."""
     row_f = (drone_state.lat - BASE_LAT) / CELL_LAT - 0.5
     row = max(0, round(row_f))
 
@@ -237,8 +285,44 @@ def _snap_step_to_position(spc: int, cols: int, steps_per_cycle: int) -> int:
     return row * steps_per_cycle + max(0, pos_h)
 
 
+def _close_mission_db():
+    global active_mission_id
+    if not active_mission_id:
+        return
+    db = SessionLocal()
+    try:
+        m = db.query(MissionModel).filter(MissionModel.id == active_mission_id).first()
+        if m:
+            m.ended_at = datetime.now(timezone.utc)
+            m.status = "completed"
+            m.final_battery = round(drone_state.battery, 1)
+            m.coverage_percent = search_grid.coverage_percent()
+            m.detections_count = db.query(DetectionModel).filter(
+                DetectionModel.mission_id == active_mission_id
+            ).count()
+            for cell in search_grid.cells.values():
+                if cell["status"] != "unexplored":
+                    db.add(GridCellModel(
+                        mission_id=active_mission_id,
+                        row=cell["row"],
+                        col=cell["col"],
+                        cell_lat=cell["lat"],
+                        cell_lng=cell["lng"],
+                        status=cell["status"],
+                        explored_at=datetime.fromtimestamp(
+                            cell["explored_at"] / 1000, tz=timezone.utc
+                        ) if cell["explored_at"] else None,
+                    ))
+            db.commit()
+    except Exception as e:
+        print(f"DB error closing mission: {e}")
+        db.rollback()
+    finally:
+        db.close()
+    active_mission_id = None
+
+
 async def _simulation_with_grid():
-    """Wrapper que corre la simulación y actualiza la grilla."""
     spc = int(CELL_SIZE_METERS / 5.0)
     cols = search_grid.cols
     steps_horizontal = (cols - 1) * spc
@@ -254,6 +338,7 @@ async def _simulation_with_grid():
         if drone_state.battery <= 0:
             drone_state.status = "landed"
             drone_state.mission_active = False
+            _close_mission_db()
             return
 
         if drone_state.real_telemetry_active:
@@ -308,7 +393,6 @@ async def _simulation_with_grid():
         drone_state.status = "flying"
         drone_state.last_update = time.time()
 
-        # Actualizar grilla
         changed_cells = search_grid.update_position(drone_state.lat, drone_state.lng)
         if changed_cells and grid_clients:
             grid_update = {
@@ -322,7 +406,6 @@ async def _simulation_with_grid():
                 except Exception:
                     grid_clients.remove(client)
 
-        # Guardar último mensaje de telemetría
         drone_state._last_telemetry = {
             "type": "telemetry",
             "data": {
@@ -342,16 +425,13 @@ async def _simulation_with_grid():
 
         await asyncio.sleep(1)
 
-# Envia Estado de la grilla
-# Event-driven. No tiene loop propio. Escucha y recibe broadcasts del canal de misión y detección
 @app.websocket("/ws/grid")
 async def grid_websocket(websocket: WebSocket):
     await websocket.accept()
-    # Se crea/agrega el cliente de la grilla
     grid_clients.append(websocket)
     await websocket.send_text(json.dumps({
         "type": "grid_init",
-        "cells": search_grid.get_all_cells(), # Devuelve lista de cells.values() (cada celda dict)
+        "cells": search_grid.get_all_cells(),
         "coverage": search_grid.coverage_percent()
     }))
     try:
@@ -360,7 +440,6 @@ async def grid_websocket(websocket: WebSocket):
     except WebSocketDisconnect:
         grid_clients.remove(websocket)
 
-# Singleton: una sola conexión al ESP32 compartida por todos los clientes
 _grabber: FrameGrabber | None = None
 
 def get_grabber() -> FrameGrabber:
@@ -370,7 +449,6 @@ def get_grabber() -> FrameGrabber:
         _grabber.start()
     return _grabber
 
-# Envía  Video frames + detecciones IA
 @app.websocket("/ws/detection")
 async def detection_websocket(websocket: WebSocket):
     await websocket.accept()
@@ -382,6 +460,11 @@ async def detection_websocket(websocket: WebSocket):
             "data": detection_history
         }))
 
+    for _ in range(20):
+        if active_mission_id is not None:
+            break
+        await asyncio.sleep(0.25)
+
     grabber = get_grabber()
     has_camera = grabber._running
 
@@ -390,13 +473,8 @@ async def detection_websocket(websocket: WebSocket):
     last_frame = None
     detected_positions: set[tuple[float, float]] = set()
 
-    # Actualizar simulador con dimensiones reales
-    # thermal_sim.frame_w = frame_w
-    # thermal_sim.frame_h = frame_h
-
     try:
         while True:
-            # 1. Frame — nunca bloquea, toma el último disponible
             if has_camera:
                 frame = grabber.grab()
                 if frame is None:
@@ -407,7 +485,6 @@ async def detection_websocket(websocket: WebSocket):
                 frame = last_frame if last_frame is not None else \
                     np.random.randint(80, 120, (frame_h, frame_w, 3), dtype=np.uint8)
 
-            # 2-4. YOLO y térmica en paralelo, luego fusión + encoding
             def run_yolo(f):
                 return yolo.detect(f)
 
@@ -439,7 +516,6 @@ async def detection_websocket(websocket: WebSocket):
                 fuse_and_encode, frame, rgb_detections, t_matrix, t_dets
             )
 
-            # 5. GPS + envío de detecciones fusionadas
             geo_detections = []
             for det in fused:
                 geo_det = {
@@ -487,6 +563,65 @@ async def detection_websocket(websocket: WebSocket):
                         "data": det_msg
                     }))
 
+                    if active_mission_id:
+                        db = SessionLocal()
+                        try:
+                            db.add(DetectionModel(
+                                id=geo_det["id"],
+                                mission_id=active_mission_id,
+                                timestamp=datetime.fromtimestamp(
+                                    geo_det["position"]["timestamp"] / 1000, tz=timezone.utc
+                                ),
+                                position_lat=geo_det["position"]["lat"],
+                                position_lng=geo_det["position"]["lng"],
+                                position_altitude=geo_det["position"]["altitude"],
+                                confidence=det["confidence"],
+                                source=det["source"],
+                                temperature=det.get("temperature"),
+                                rgb_confidence=det.get("rgb_confidence"),
+                            ))
+                            db.commit()
+                        except Exception as e:
+                            print(f"DB error saving detection: {e}")
+                            db.rollback()
+                        finally:
+                            db.close()
+
+                    if active_mission_id:
+                        async def _persist(
+                            _frame=frame,
+                            _conf_label=conf_label,
+                            _det=det,
+                            _lat=drone_state.lat,
+                            _lng=drone_state.lng,
+                            _alt=drone_state.altitude,
+                        ):
+                            _, buf = cv2.imencode('.jpg', _frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                            det_payload = DetectionPayload(
+                                confidence=_conf_label,
+                                confidence_score=float(_det.get("confidence", 0.5)),
+                                source=_det.get("source", "rgb"),
+                                temperature_celsius=_det.get("temperature"),
+                                bounding_box=BoundingBox(
+                                    x_norm=_det.get("x", 0.0), y_norm=_det.get("y", 0.0),
+                                    w_norm=_det.get("w", 0.0), h_norm=_det.get("h", 0.0),
+                                ),
+                            )
+                            await save_image(
+                                buf.tobytes(),
+                                ImageUploadRequest(
+                                    mission_id=str(active_mission_id),
+                                    lat=_lat,
+                                    lng=_lng,
+                                    altitude_m=_alt,
+                                    timestamp=_dt.utcnow(),
+                                    view_mode="rgb",
+                                    camera_source=CAMERA_SOURCE,
+                                    detections=[det_payload],
+                                ),
+                            )
+                        asyncio.create_task(_persist())
+
             await websocket.send_text(json.dumps({
                 "type": "frame",
                 "frame": frame_b64,
@@ -499,3 +634,70 @@ async def detection_websocket(websocket: WebSocket):
 
     except WebSocketDisconnect:
         pass
+
+
+@app.get("/missions")
+def list_missions():
+    db = SessionLocal()
+    try:
+        missions = db.query(MissionModel).order_by(MissionModel.created_at.desc()).all()
+        return [
+            {
+                "id": m.id,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+                "started_at": m.started_at.isoformat() if m.started_at else None,
+                "ended_at": m.ended_at.isoformat() if m.ended_at else None,
+                "status": m.status,
+                "initial_battery": m.initial_battery,
+                "final_battery": m.final_battery,
+                "coverage_percent": m.coverage_percent,
+                "detections_count": len(m.detections),
+                "grid_rows": m.grid_rows,
+                "grid_cols": m.grid_cols,
+                "grid_center_lat": m.grid_center_lat,
+                "grid_center_lng": m.grid_center_lng,
+            }
+            for m in missions
+        ]
+    finally:
+        db.close()
+
+
+@app.get("/missions/{mission_id}")
+def get_mission(mission_id: int):
+    db = SessionLocal()
+    try:
+        m = db.query(MissionModel).filter(MissionModel.id == mission_id).first()
+        if not m:
+            raise HTTPException(status_code=404, detail="Mission not found")
+        return {
+            "id": m.id,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+            "started_at": m.started_at.isoformat() if m.started_at else None,
+            "ended_at": m.ended_at.isoformat() if m.ended_at else None,
+            "status": m.status,
+            "initial_battery": m.initial_battery,
+            "final_battery": m.final_battery,
+            "coverage_percent": m.coverage_percent,
+            "detections_count": m.detections_count,
+            "grid_rows": m.grid_rows,
+            "grid_cols": m.grid_cols,
+            "grid_center_lat": m.grid_center_lat,
+            "grid_center_lng": m.grid_center_lng,
+            "detections": [
+                {
+                    "id": d.id,
+                    "timestamp": d.timestamp.isoformat(),
+                    "position_lat": d.position_lat,
+                    "position_lng": d.position_lng,
+                    "position_altitude": d.position_altitude,
+                    "confidence": d.confidence,
+                    "source": d.source,
+                    "temperature": d.temperature,
+                    "rgb_confidence": d.rgb_confidence,
+                }
+                for d in m.detections
+            ],
+        }
+    finally:
+        db.close()
