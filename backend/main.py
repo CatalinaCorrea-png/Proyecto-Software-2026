@@ -407,25 +407,37 @@ async def detection_websocket(websocket: WebSocket):
                 frame = last_frame if last_frame is not None else \
                     np.random.randint(80, 120, (frame_h, frame_w, 3), dtype=np.uint8)
 
-            # 2-4. Detección RGB + térmica + fusión + encoding en thread
-            def process_and_encode(f):
-                rgb_dets = yolo.detect(f)
+            # 2-4. YOLO y térmica en paralelo, luego fusión + encoding
+            def run_yolo(f):
+                return yolo.detect(f)
+
+            def run_thermal(f):
                 t_matrix = thermal_sim.generate(f)
                 t_dets = thermal.detect(t_matrix)
-                fused = fuse_detections(rgb_dets, t_dets, frame_w=frame_w, frame_h=frame_h)
+                return t_matrix, t_dets
+
+            rgb_future = asyncio.to_thread(run_yolo, frame)
+            thermal_future = asyncio.to_thread(run_thermal, frame)
+            rgb_detections, (t_matrix, t_dets) = await asyncio.gather(
+                rgb_future, thermal_future
+            )
+
+            def fuse_and_encode(f, rgb_dets, t_mat, t_ds):
+                fused = fuse_detections(rgb_dets, t_ds, frame_w=frame_w, frame_h=frame_h)
 
                 annotated = yolo.draw(f.copy(), rgb_dets)
                 _, buf1 = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 60])
                 f_b64 = base64.b64encode(buf1).decode()
 
-                overlay = thermal_sim.overlay_on_frame(f, t_matrix, alpha=0.65)
+                overlay = thermal_sim.overlay_on_frame(f, t_mat, alpha=0.65)
                 _, buf2 = cv2.imencode('.jpg', overlay, [cv2.IMWRITE_JPEG_QUALITY, 60])
                 o_b64 = base64.b64encode(buf2).decode()
 
-                return rgb_dets, fused, f_b64, o_b64
+                return fused, f_b64, o_b64
 
-            rgb_detections, fused, frame_b64, overlay_b64 = \
-                await asyncio.to_thread(process_and_encode, frame)
+            fused, frame_b64, overlay_b64 = await asyncio.to_thread(
+                fuse_and_encode, frame, rgb_detections, t_matrix, t_dets
+            )
 
             # 5. GPS + envío de detecciones fusionadas
             geo_detections = []
