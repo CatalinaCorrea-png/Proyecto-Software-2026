@@ -407,25 +407,29 @@ async def detection_websocket(websocket: WebSocket):
                 frame = last_frame if last_frame is not None else \
                     np.random.randint(80, 120, (frame_h, frame_w, 3), dtype=np.uint8)
 
-            # 2-4. Detección + fusión en thread
-            # def process(f):
-            #     rgb_dets = yolo.detect(f)
-            #     t_matrix = thermal_sim.generate(f)
-            #     t_dets = thermal.detect(t_matrix)
-            #     fused = fuse_detections(rgb_dets, t_dets, frame_w=frame_w, frame_h=frame_h)
-            #     return rgb_dets, t_matrix, fused
-            
-            # def encode(f):
-            #     _, buf = cv2.imencode('.jpg', f, [cv2.IMWRITE_JPEG_QUALITY, 70])
-            #     return base64.b64encode(buf).decode()
+            # 2-4. Detección RGB + térmica + fusión + encoding en thread
+            def process_and_encode(f):
+                rgb_dets = yolo.detect(f)
+                t_matrix = thermal_sim.generate(f)
+                t_dets = thermal.detect(t_matrix)
+                fused = fuse_detections(rgb_dets, t_dets, frame_w=frame_w, frame_h=frame_h)
 
-            rgb_detections = await asyncio.to_thread(yolo.detect, frame)
-            # rgb_detections, temp_matrix, fused = await asyncio.to_thread(process, frame)
-            # frame_b64 = await asyncio.to_thread(encode, frame)
+                annotated = yolo.draw(f.copy(), rgb_dets)
+                _, buf1 = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                f_b64 = base64.b64encode(buf1).decode()
 
-            # 5. GPS
+                overlay = thermal_sim.overlay_on_frame(f, t_matrix, alpha=0.65)
+                _, buf2 = cv2.imencode('.jpg', overlay, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                o_b64 = base64.b64encode(buf2).decode()
+
+                return rgb_dets, fused, f_b64, o_b64
+
+            rgb_detections, fused, frame_b64, overlay_b64 = \
+                await asyncio.to_thread(process_and_encode, frame)
+
+            # 5. GPS + envío de detecciones fusionadas
             geo_detections = []
-            for det in rgb_detections:
+            for det in fused:
                 geo_det = {
                     **det,
                     "id": str(uuid.uuid4()),
@@ -438,8 +442,7 @@ async def detection_websocket(websocket: WebSocket):
                 }
                 geo_detections.append(geo_det)
 
-                conf = det["confidence"]
-                conf_label = "high" if conf > 0.7 else "medium" if conf > 0.4 else "low"
+                conf_label = det["confidence"]
                 pos_key = (round(drone_state.lat, 5), round(drone_state.lng, 5))
                 now = time.time()
                 if conf_label in ("high", "medium") and \
@@ -472,40 +475,12 @@ async def detection_websocket(websocket: WebSocket):
                         "data": det_msg
                     }))
 
-            # 6. Encode frames en thread
-            # def encode_frames(f, rgb_dets, t_matrix):
-            def encode_frame(f, rgb_dets):
-                annotated = yolo.draw(f.copy(), rgb_dets)
-                _, buf = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 60])
-                return base64.b64encode(buf).decode()
-
-            #     thermal_overlay = thermal_sim.overlay_on_frame(f, t_matrix, alpha=0.65)
-            #     _, buf2 = cv2.imencode('.jpg', thermal_overlay, [cv2.IMWRITE_JPEG_QUALITY, 60])
-            #     o_b64 = base64.b64encode(buf2).decode()
-
-            #     thermal_pure = thermal_sim.to_visual_frame(t_matrix, 128, 96)
-            #     _, buf3 = cv2.imencode('.jpg', thermal_pure)
-            #     t_b64 = base64.b64encode(buf3).decode()
-            #     return f_b64, o_b64, t_b64
-
-            # frame_b64, overlay_b64, thermal_b64 = await asyncio.to_thread(
-            #     encode_frames, frame, rgb_detections, temp_matrix
-            # )
-            frame_b64 = await asyncio.to_thread(
-                encode_frame, frame, rgb_detections
-            )
-
             await websocket.send_text(json.dumps({
                 "type": "frame",
                 "frame": frame_b64,
-                # "thermal_overlay": overlay_b64,
-                # "thermal_frame": thermal_b64,
-                # "fused_detections": geo_detections,
-                # "detection_count": len(fused)
-                "thermal_overlay": None,
-                "thermal_frame": None,
+                "thermal_overlay": overlay_b64,
                 "fused_detections": geo_detections,
-                "detection_count": len(geo_detections)
+                "detection_count": len(fused)
             }))
 
             await asyncio.sleep(1/15)

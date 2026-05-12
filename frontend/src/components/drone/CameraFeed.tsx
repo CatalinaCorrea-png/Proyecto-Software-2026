@@ -6,7 +6,7 @@ interface Props {
   onNewDetection?: (detection: Detection) => void
 }
 
-type ViewMode = 'rgb' | 'overlay' | 'thermal'
+type ViewMode = 'rgb' | 'overlay'
 
 export function CameraFeed({ onNewDetection }: Props) {
   const { framePayload, detections, isConnected } = useDetectionFeed('ws://localhost:8000/ws/detection')
@@ -23,7 +23,7 @@ export function CameraFeed({ onNewDetection }: Props) {
   }, [detections, onNewDetection])
 
   const viewLabels: Record<ViewMode, string> = {
-    rgb: 'RGB', overlay: 'OVERLAY', thermal: 'TÉRMICA'
+    rgb: 'RGB', overlay: 'OVERLAY TÉRMICO'
   }
 
   return (
@@ -62,7 +62,7 @@ export function CameraFeed({ onNewDetection }: Props) {
 
       {/* Toggle */}
       <div style={{ display: 'flex', gap: 4 }}>
-        {(['rgb', 'overlay', 'thermal'] as ViewMode[]).map(mode => (
+        {(['rgb', 'overlay'] as ViewMode[]).map(mode => (
           <button
             key={mode}
             onClick={() => setViewMode(mode)}
@@ -86,13 +86,11 @@ export function CameraFeed({ onNewDetection }: Props) {
           <img
             src={`data:image/jpeg;base64,${
               viewMode === 'rgb' ? framePayload.frame
-              : viewMode === 'overlay' ? (framePayload.thermal_overlay ?? framePayload.frame)
-              : framePayload.thermal_frame
+              : (framePayload.thermal_overlay ?? framePayload.frame)
             }`}
             style={{
               width: '100%', height: 'auto',
               display: 'block',
-              imageRendering: viewMode === 'thermal' ? 'pixelated' : 'auto'
             }}
             alt="camera feed"
           />

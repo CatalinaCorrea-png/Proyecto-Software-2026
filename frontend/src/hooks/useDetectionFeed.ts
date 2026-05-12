@@ -4,8 +4,7 @@ import type { Detection } from '../types'
 interface FramePayload {
   type: 'frame'
   frame: string
-  thermal_overlay: string 
-  thermal_frame: string
+  thermal_overlay: string
   fused_detections: Array<{
     confidence: 'high' | 'medium' | 'low'
     source: string
