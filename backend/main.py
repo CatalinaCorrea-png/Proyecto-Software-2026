@@ -76,6 +76,7 @@ thermal_sim = ThermalSimulator()          # ← Simulacion de camara térmica
 # Variables para cooldown de detecciones
 last_detection_time = 0.0
 DETECTION_COOLDOWN = 3.0
+active_mission_id = None
 # Lista de clientes WebSocket conectados a la grilla para enviar actualizaciones en tiempo real
 grid_clients: list[WebSocket] = []
 
@@ -516,11 +517,13 @@ async def detection_websocket(websocket: WebSocket):
                         _frame=frame,
                         _conf_label=conf_label,
                         _det=det,
+                        _all_dets=rgb_detections,
                         _lat=drone_state.lat,
                         _lng=drone_state.lng,
                         _alt=drone_state.altitude,
                     ):
-                        _, buf = cv2.imencode('.jpg', _frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                        annotated = yolo.draw(_frame.copy(), _all_dets)
+                        _, buf = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 60])
                         det_payload = DetectionPayload(
                             confidence=_conf_label,
                             confidence_score=float(_det.get("confidence", 0.5)),

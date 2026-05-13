@@ -18,7 +18,7 @@ function App() {
 
   const handleNewDetection = useCallback((detection: Detection) => {
     if (detection.confidence === 'low') return
-    setMapDetections(prev => [detection, ...prev].slice(0, 10))
+    setMapDetections(prev => [detection, ...prev])
   }, [])
 
   const [galleryMissionFilter, setGalleryMissionFilter] = useState('')
