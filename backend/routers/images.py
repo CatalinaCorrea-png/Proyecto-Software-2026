@@ -78,7 +78,7 @@ async def images_near(
     radius_m: float = Query(500),
     mission_id: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, le=100),
+    page_size: int = Query(20, le=500),
 ):
     query: dict = {
         "coordinates": {
@@ -123,7 +123,7 @@ async def list_images(
     mission_id: Optional[str] = Query(None),
     has_detections: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, le=100),
+    page_size: int = Query(20, le=500),
 ):
     query: dict = {}
     if mission_id:

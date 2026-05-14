@@ -32,8 +32,8 @@ export function TelemetryPanel({ telemetry, isConnected, detectionCount }: Props
     <div style={{
       background: '#0D1B2A',
       border: '1px solid #1E3A5F',
-      borderRadius: '6px',
-      padding: '10px',
+      borderRadius: '8px',
+      padding: '10px 12px',
       color: 'white',
       fontFamily: 'monospace'
     }}>

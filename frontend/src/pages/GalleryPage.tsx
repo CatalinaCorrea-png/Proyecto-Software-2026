@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import L from 'leaflet'
 import { useImageGallery } from '../hooks/useImageGallery'
 import type { ImageMeta } from '../types'
-import 'leaflet/dist/leaflet.css'
 
 const C = {
   bg:          '#0A0E1A',
@@ -18,19 +15,6 @@ const C = {
   textDim:     '#455A64',
   success:     '#00E5FF',
   grid:        'rgba(255,255,255,0.03)',
-}
-
-function dotIcon() {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      width:12px;height:12px;border-radius:50%;
-      background:#FF6D00;border:2px solid #fff;
-      box-shadow:0 0 8px rgba(255,109,0,0.8);
-    "></div>`,
-    iconSize: [12, 12],
-    iconAnchor: [6, 6],
-  })
 }
 
 // ── Scanline overlay ──────────────────────────────────────────────────────────
@@ -264,7 +248,6 @@ export default function GalleryPage({ initialMissionFilter = '' }: { initialMiss
     setMissionFilter(initialMissionFilter)
     setPage(1)
   }, [initialMissionFilter])
-  const [view, setView] = useState<'grid' | 'map'>('grid')
   const gridRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -274,20 +257,6 @@ export default function GalleryPage({ initialMissionFilter = '' }: { initialMiss
   const goToPage = (next: number) => setPage(next)
 
   const pageCount = Math.ceil(total / 20)
-
-  const viewBtn = (active: boolean): React.CSSProperties => ({
-    background: active ? C.orange : 'transparent',
-    color: active ? '#fff' : C.muted,
-    border: `1px solid ${active ? C.orange : C.border}`,
-    borderRadius: 4,
-    padding: '5px 16px',
-    cursor: 'pointer',
-    fontFamily: 'monospace',
-    fontSize: 10,
-    letterSpacing: 1.5,
-    transition: 'all 0.15s',
-    boxShadow: active ? `0 0 12px rgba(255,109,0,0.3)` : 'none',
-  })
 
   const paginBtn = (disabled: boolean): React.CSSProperties => ({
     background: 'transparent',
@@ -342,10 +311,6 @@ export default function GalleryPage({ initialMissionFilter = '' }: { initialMiss
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button style={viewBtn(view === 'grid')} onClick={() => setView('grid')}>▦ GRILLA</button>
-            <button style={viewBtn(view === 'map')} onClick={() => setView('map')}>◎ MAPA</button>
-          </div>
         </div>
 
         {/* Filters bar */}
@@ -423,86 +388,28 @@ export default function GalleryPage({ initialMissionFilter = '' }: { initialMiss
           </p>
         )}
 
-        {/* Grid view — siempre visible, opacidad baja mientras carga */}
-        {view === 'grid' && (
-          <>
-            {images.length === 0 && !loading && (
-              <div style={{
-                textAlign: 'center', padding: '80px 0',
-                fontFamily: 'monospace', fontSize: 11, color: C.textDim, letterSpacing: 2,
-              }}>
-                <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.3 }}>◎</div>
-                SIN CAPTURAS ALMACENADAS
-              </div>
-            )}
-            <div ref={gridRef} style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: 12,
-              opacity: loading ? 0.4 : 1,
-              transition: 'opacity 0.2s',
-              pointerEvents: loading ? 'none' : 'auto',
-            }}>
-              {images.map(img => (
-                <ImageCard key={img.id} image={img} onSelect={setSelectedImage} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Map view */}
-        {view === 'map' && images.length > 0 && (
-          <div style={{
-            borderRadius: 6,
-            overflow: 'hidden',
-            border: `1px solid ${C.border}`,
-            boxShadow: '0 0 30px rgba(0,0,0,0.5)',
-          }}>
-            <MapContainer
-              center={[images[0].lat, images[0].lng]}
-              zoom={15}
-              style={{ height: '65vh' }}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; OpenStreetMap contributors'
-              />
-              {images.map(img => (
-                <Marker key={img.id} position={[img.lat, img.lng]} icon={dotIcon()}>
-                  <Popup>
-                    <img
-                      src={`data:image/jpeg;base64,${img.thumbnail_b64}`}
-                      alt="thumb"
-                      style={{ width: 160, display: 'block', marginBottom: 6, borderRadius: 3 }}
-                    />
-                    <div style={{ fontSize: 11, fontFamily: 'monospace' }}>
-                      <div>{new Date(img.timestamp).toLocaleString()}</div>
-                      <div style={{ color: '#FF6D00', marginTop: 2, fontWeight: 'bold' }}>
-                        {img.detection_count} detección(es)
-                      </div>
-                      <button
-                        onClick={() => setSelectedImage(img)}
-                        style={{ marginTop: 6, fontSize: 10, cursor: 'pointer', fontFamily: 'monospace' }}
-                      >
-                        VER COMPLETA →
-                      </button>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          </div>
-        )}
-
-        {view === 'map' && !loading && images.length === 0 && (
+        {/* Grid de capturas */}
+        {images.length === 0 && !loading && (
           <div style={{
             textAlign: 'center', padding: '80px 0',
             fontFamily: 'monospace', fontSize: 11, color: C.textDim, letterSpacing: 2,
           }}>
             <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.3 }}>◎</div>
-            SIN CAPTURAS PARA MOSTRAR
+            SIN CAPTURAS ALMACENADAS
           </div>
         )}
+        <div ref={gridRef} style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gap: 12,
+          opacity: loading ? 0.4 : 1,
+          transition: 'opacity 0.2s',
+          pointerEvents: loading ? 'none' : 'auto',
+        }}>
+          {images.map(img => (
+            <ImageCard key={img.id} image={img} onSelect={setSelectedImage} />
+          ))}
+        </div>
 
         {/* Pagination */}
         {pageCount > 1 && (

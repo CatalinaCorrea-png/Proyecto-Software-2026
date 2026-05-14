@@ -612,11 +612,13 @@ async def detection_websocket(websocket: WebSocket):
                             _frame=frame,
                             _conf_label=conf_label,
                             _det=det,
+                            _all_dets=rgb_detections,
                             _lat=drone_state.lat,
                             _lng=drone_state.lng,
                             _alt=drone_state.altitude,
                         ):
-                            _, buf = cv2.imencode('.jpg', _frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                            annotated = yolo.draw(_frame.copy(), _all_dets)
+                            _, buf = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 60])
                             bbox = _det.get("bbox") or {}
                             det_payload = DetectionPayload(
                                 confidence=_conf_label,
