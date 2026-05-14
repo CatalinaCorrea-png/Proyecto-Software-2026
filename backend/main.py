@@ -142,10 +142,14 @@ class FrameGrabber:
 
     def _mjpeg_reader_loop(self):
         while self._running:
+            resp = None
             try:
-                resp = requests.get(self._stream_url, stream=True, timeout=10)
+                resp = requests.get(
+                    self._stream_url, stream=True,
+                    timeout=(5, 10),
+                )
                 buf = b''
-                for chunk in resp.iter_content(chunk_size=1024):
+                for chunk in resp.iter_content(chunk_size=4096):
                     if not self._running:
                         break
                     buf += chunk
@@ -167,10 +171,15 @@ class FrameGrabber:
                         if frame is not None:
                             with self._lock:
                                 self._frame = frame
-                resp.close()
             except Exception as e:
-                print(f"⚠️ MJPEG stream error: {e}, reconectando...")
-                time.sleep(2)
+                print(f"⚠️ MJPEG stream error: {e}, reconectando en 2s...")
+            finally:
+                if resp:
+                    try:
+                        resp.close()
+                    except Exception:
+                        pass
+            time.sleep(2)
 
     def _cv2_reader_loop(self):
         while self._running and self._cap is not None:
@@ -209,8 +218,19 @@ def drone_control(cmd: DroneCommand):
 
 @app.post("/drone/reverse")
 def drone_reverse():
-    drone_state.sim_direction *= -1
+    drone_state.sim_direction = -1 if drone_state.sim_direction >= 0 else 1
     return {"direction": drone_state.sim_direction}
+
+@app.post("/drone/hover")
+def drone_hover():
+    if drone_state.sim_direction == 0:
+        drone_state.sim_direction = 1
+        return {"status": "resumed", "direction": 1}
+    drone_state.sim_direction = 0
+    drone_state.cmd_throttle = 0
+    drone_state.cmd_pitch = 0
+    drone_state.cmd_roll = 0
+    return {"status": "hover"}
 
 @app.get("/drone/state")
 def get_drone_state():
@@ -387,10 +407,10 @@ async def _simulation_with_grid():
             drone_state.lat = lat
             drone_state.lng = lng
             drone_state.sim_step = max(0, drone_state.sim_step + drone_state.sim_direction)
-            current_speed = 5.0
+            current_speed = 0.0 if drone_state.sim_direction == 0 else 5.0
 
         drone_state.battery = max(0, drone_state.battery - 0.05)
-        drone_state.status = "flying"
+        drone_state.status = "hover" if drone_state.sim_direction == 0 and source == "sim" else "flying"
         drone_state.last_update = time.time()
 
         changed_cells = search_grid.update_position(drone_state.lat, drone_state.lng)
@@ -597,14 +617,16 @@ async def detection_websocket(websocket: WebSocket):
                             _alt=drone_state.altitude,
                         ):
                             _, buf = cv2.imencode('.jpg', _frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                            bbox = _det.get("bbox") or {}
                             det_payload = DetectionPayload(
                                 confidence=_conf_label,
-                                confidence_score=float(_det.get("confidence", 0.5)),
+                                confidence_score=float(_det.get("rgb_confidence") or _det.get("iou") or 0.5),
                                 source=_det.get("source", "rgb"),
                                 temperature_celsius=_det.get("temperature"),
                                 bounding_box=BoundingBox(
-                                    x_norm=_det.get("x", 0.0), y_norm=_det.get("y", 0.0),
-                                    w_norm=_det.get("w", 0.0), h_norm=_det.get("h", 0.0),
+                                    x_norm=bbox.get("x1", 0.0), y_norm=bbox.get("y1", 0.0),
+                                    w_norm=bbox.get("x2", 0.0) - bbox.get("x1", 0.0),
+                                    h_norm=bbox.get("y2", 0.0) - bbox.get("y1", 0.0),
                                 ),
                             )
                             await save_image(

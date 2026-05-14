@@ -126,6 +126,7 @@ export function DroneController() {
   const [roll, setRoll] = useState(0)
   const [armed, setArmed] = useState(false)
   const [reversed, setReversed] = useState(false)
+  const [hovering, setHovering] = useState(false)
 
   const cmdRef = useRef({ throttle: 0, yaw: 0, pitch: 0, roll: 0 })
 
@@ -188,6 +189,7 @@ export function DroneController() {
             onClick={() => {
               fetch(`${API}/drone/reverse`, { method: 'POST' }).catch(() => {})
               setReversed(r => !r)
+              setHovering(false)
             }}
             style={{
               padding: '3px 10px',
@@ -204,6 +206,32 @@ export function DroneController() {
             }}
           >
             {reversed ? '⟵ REV' : '⟶ FWD'}
+          </button>
+          <button
+            onClick={() => {
+              fetch(`${API}/drone/hover`, { method: 'POST' }).catch(() => {})
+              setHovering(h => !h)
+              if (!hovering) {
+                setThrottle(0)
+                setRoll(0)
+                setPitch(0)
+              }
+            }}
+            style={{
+              padding: '3px 10px',
+              fontSize: 10,
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              letterSpacing: 1,
+              border: `1px solid ${hovering ? '#FFC107' : '#37474F'}`,
+              borderRadius: 4,
+              cursor: 'pointer',
+              background: hovering ? '#FFC10720' : 'transparent',
+              color: hovering ? '#FFC107' : '#546E7A',
+              transition: 'all 0.2s',
+            }}
+          >
+            {hovering ? '⏸ HOVER' : '⏸ HOVER'}
           </button>
           <button
             onClick={toggleArm}

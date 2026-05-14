@@ -11,6 +11,7 @@ interface DashboardProps {
   telemetry: DroneTelemetry | null
   trail: Array<{ lat: number; lng: number }>
   mapDetections: Detection[]
+  detectionCount: number
   onNewDetection: (detection: Detection) => void
 }
 
@@ -19,6 +20,7 @@ export function Dashboard({
   telemetry,
   trail,
   mapDetections,
+  detectionCount,
   onNewDetection,
 }: DashboardProps) {
   return (
@@ -64,7 +66,7 @@ export function Dashboard({
         <TelemetryPanel
           telemetry={telemetry}
           isConnected={isConnected}
-          detectionCount={mapDetections.length}
+          detectionCount={detectionCount}
         />
 
         {/* Cámara */}

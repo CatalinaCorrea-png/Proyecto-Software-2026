@@ -46,15 +46,9 @@ class ThermalSimulator:
       self._detector = vision.PoseLandmarker.create_from_options(options)
 
   def generate(self, frame_bgr: np.ndarray) -> np.ndarray:
-      # Fondo variable
       self._bg_phase += 0.04
-      base_temp = AMBIENT_TEMP + 2.5 * np.sin(self._bg_phase)
-      matrix = np.random.normal(base_temp, 1.0, (THERMAL_GRID_H, THERMAL_GRID_W))
-
-      for _ in range(np.random.randint(0, 3)):
-          r = np.random.randint(0, THERMAL_GRID_H - 3)
-          c = np.random.randint(0, THERMAL_GRID_W - 3)
-          matrix[r:r+3, c:c+3] = np.random.normal(27.0, 1.0, (3, 3))
+      base_temp = AMBIENT_TEMP + 1.5 * np.sin(self._bg_phase)
+      matrix = np.random.normal(base_temp, 0.3, (THERMAL_GRID_H, THERMAL_GRID_W))
 
       # MediaPipe nueva API — necesita mp.Image
       frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)

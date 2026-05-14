@@ -15,9 +15,11 @@ function App() {
   const { lastMessage, isConnected } = useWebSocket('ws://localhost:8000/ws/mission')
   const { telemetry, trail } = useMission(lastMessage)
   const [mapDetections, setMapDetections] = useState<Detection[]>([])
+  const [detectionCount, setDetectionCount] = useState(0)
 
   const handleNewDetection = useCallback((detection: Detection) => {
     if (detection.confidence === 'low') return
+    setDetectionCount(c => c + 1)
     setMapDetections(prev => [detection, ...prev].slice(0, 10))
   }, [])
 
@@ -54,6 +56,7 @@ function App() {
             telemetry={telemetry}
             trail={trail}
             mapDetections={mapDetections}
+            detectionCount={detectionCount}
             onNewDetection={handleNewDetection}
           />
         </div>
