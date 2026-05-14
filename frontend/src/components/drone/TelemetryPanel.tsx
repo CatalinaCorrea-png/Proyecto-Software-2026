@@ -64,14 +64,14 @@ export function TelemetryPanel({ telemetry, isConnected, detectionCount }: Props
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
         <Stat label="BATERÍA" value={telemetry ? `${telemetry.battery}%` : '--'} color={batteryColor} />
         <Stat label="ALTITUD" value={telemetry ? `${telemetry.position.altitude}m` : '--'} />
         <Stat label="VELOCIDAD" value={telemetry ? `${telemetry.speed} m/s` : '--'} />
         <Stat label="ESTADO" value={telemetry?.status ?? '--'} />
         <Stat label="LAT" value={telemetry ? telemetry.position.lat.toFixed(5) : '--'} />
         <Stat label="LNG" value={telemetry ? telemetry.position.lng.toFixed(5) : '--'} />
-        <Stat label="DETECCIONES" value={String(detectionCount)} color="#FF6D00" />
+        <Stat label="DETEC." value={String(detectionCount)} color="#FF6D00" />
         <Stat label="MISIÓN" value={formatElapsed(lastElapsedRef.current)} color="#00BCD4"/>
       </div>
     </div>

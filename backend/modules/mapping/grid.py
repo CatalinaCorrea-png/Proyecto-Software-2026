@@ -1,43 +1,38 @@
 import math
 import time
-from core.state import BASE_LAT
 
-# 20 metros en grados decimales (aproximado, válido para latitudes medias)
 CELL_SIZE_METERS = 20
 METERS_PER_LAT_DEGREE = 111_000
- # ajustado para Buenos Aires
-# METERS_PER_LNG_DEGREE = 111_000 * math.cos(math.radians(-34.6)) 
-# dinámico según la latitud real
-# METERS_PER_LNG_DEGREE = 111_000 * math.cos(math.radians(-32.6))  # Aconcagua
 
-METERS_PER_LNG_DEGREE = 111_000 * math.cos(math.radians(BASE_LAT))
-CELL_LAT = CELL_SIZE_METERS / METERS_PER_LAT_DEGREE
-CELL_LNG = CELL_SIZE_METERS / METERS_PER_LNG_DEGREE
+def cell_degrees(cell_size_m: float, lat: float):
+    cell_lat = cell_size_m / METERS_PER_LAT_DEGREE
+    cell_lng = cell_size_m / (METERS_PER_LAT_DEGREE * math.cos(math.radians(lat)))
+    return cell_lat, cell_lng
+
+CELL_LAT, CELL_LNG = cell_degrees(CELL_SIZE_METERS, -32.65)
 
 class SearchGrid:
-    def __init__(self, center_lat: float, center_lng: float, rows: int = 15, cols: int = 20):
-        """
-        Crea una grilla centrada en un punto.
-        Por defecto 15x20 celdas = área de 300x400 metros
-        """
+    def __init__(self, center_lat: float, center_lng: float,
+                 rows: int = 15, cols: int = 20,
+                 cell_size_m: float = CELL_SIZE_METERS):
         self.rows = rows
         self.cols = cols
         self.center_lat = center_lat
         self.center_lng = center_lng
+        self.cell_size_m = cell_size_m
+        self.cell_lat, self.cell_lng = cell_degrees(cell_size_m, center_lat)
 
-        # Esquina superior izquierda
-        self.origin_lat = center_lat + (rows / 2) * CELL_LAT
-        self.origin_lng = center_lng - (cols / 2) * CELL_LNG
+        self.origin_lat = center_lat + (rows / 2) * self.cell_lat
+        self.origin_lng = center_lng - (cols / 2) * self.cell_lng
 
-        # Estado de cada celda: None = sin explorar, timestamp = cuándo fue explorada
         self.cells: dict[tuple[int,int], dict] = {}
         self._init_cells()
 
     def _init_cells(self):
         for r in range(self.rows):
             for c in range(self.cols):
-                lat = self.origin_lat - r * CELL_LAT  # ← decrece hacia el sur
-                lng = self.origin_lng + c * CELL_LNG  # ← crece hacia el este
+                lat = self.origin_lat - r * self.cell_lat
+                lng = self.origin_lng + c * self.cell_lng
                 self.cells[(r, c)] = {
                     "row": r,
                     "col": c,
@@ -48,26 +43,20 @@ class SearchGrid:
                 }
 
     def update_position(self, lat: float, lng: float) -> list[dict]:
-        """
-        Recibe posición GPS del drone.
-        Marca la celda correspondiente como explorada.
-        Retorna lista de celdas que cambiaron (para enviar al frontend).
-        """
         row, col = self._lat_lng_to_cell(lat, lng)
 
         if not (0 <= row < self.rows and 0 <= col < self.cols):
-            return []  # fuera de la grilla
+            return []
 
         cell = self.cells[(row, col)]
         if cell["status"] == "unexplored":
             cell["status"] = "explored"
             cell["explored_at"] = int(time.time() * 1000)
-            return [cell]  # solo retorna si hubo cambio
+            return [cell]
 
         return []
 
     def mark_detection(self, lat: float, lng: float) -> dict | None:
-        """Marca una celda como que tuvo una detección"""
         row, col = self._lat_lng_to_cell(lat, lng)
         if not (0 <= row < self.rows and 0 <= col < self.cols):
             return None
@@ -76,8 +65,8 @@ class SearchGrid:
         return cell
 
     def _lat_lng_to_cell(self, lat: float, lng: float) -> tuple[int, int]:
-        row = int((self.origin_lat - lat) / CELL_LAT)
-        col = int((lng - self.origin_lng) / CELL_LNG)
+        row = int((self.origin_lat - lat) / self.cell_lat)
+        col = int((lng - self.origin_lng) / self.cell_lng)
         return row, col
 
     def get_all_cells(self) -> list[dict]:

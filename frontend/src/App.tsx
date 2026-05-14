@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { MissionSetup } from './pages/MissionSetup'
 import { Dashboard } from './pages/Dashboard'
 import { MissionsHistory } from './pages/MissionsHistory'
 import GalleryPage from './pages/GalleryPage'
@@ -7,18 +8,110 @@ import { useMission } from './hooks/useMission'
 import type { Detection } from './types'
 import './App.css'
 
-type View = 'dashboard' | 'history' | 'gallery'
+type View = 'setup' | 'dashboard' | 'history' | 'gallery'
+
+function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.6)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }} onClick={onCancel}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#0D1B2A', border: '1px solid #1E3A5F',
+          borderRadius: 8, padding: '24px 28px', width: 360,
+          fontFamily: 'monospace', color: '#E0E0E0',
+          display: 'flex', flexDirection: 'column', gap: 16,
+        }}
+      >
+        <div style={{ fontSize: 14, fontWeight: 'bold', color: '#FFC107' }}>
+          Finalizar misión actual
+        </div>
+        <div style={{ fontSize: 12, color: '#90A4AE', lineHeight: 1.5 }}>
+          Se finalizará la misión en curso y se guardarán sus datos.
+          Esta acción no se puede deshacer.
+        </div>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onCancel}
+            style={{
+              background: 'transparent', border: '1px solid #37474F',
+              borderRadius: 4, padding: '6px 16px', color: '#78909C',
+              fontFamily: 'monospace', fontSize: 11, cursor: 'pointer',
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              background: '#FF6D00', border: 'none',
+              borderRadius: 4, padding: '6px 16px', color: '#fff',
+              fontFamily: 'monospace', fontSize: 11, fontWeight: 'bold',
+              cursor: 'pointer',
+            }}
+          >
+            Nueva misión
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function App() {
-  const [view, setView] = useState<View>('dashboard')
+  const hasMission = sessionStorage.getItem('missionActive') === '1'
+  const [view, setView] = useState<View>(hasMission ? 'dashboard' : 'setup')
+  const [missionStarted, setMissionStarted] = useState(hasMission)
+  const [showConfirm, setShowConfirm] = useState(false)
 
-  const { lastMessage, isConnected } = useWebSocket('ws://localhost:8000/ws/mission')
+  useEffect(() => {
+    if (!hasMission) return
+    fetch('http://localhost:8000/mission/active')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.active) {
+          sessionStorage.removeItem('missionActive')
+          setMissionStarted(false)
+          setView('setup')
+        }
+      })
+      .catch(() => {
+        sessionStorage.removeItem('missionActive')
+        setMissionStarted(false)
+        setView('setup')
+      })
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const wsUrl = missionStarted ? 'ws://localhost:8000/ws/mission' : null
+  const { lastMessage, isConnected } = useWebSocket(wsUrl)
   const { telemetry, trail } = useMission(lastMessage)
   const [mapDetections, setMapDetections] = useState<Detection[]>([])
+  const [detectionCount, setDetectionCount] = useState(0)
 
   const handleNewDetection = useCallback((detection: Detection) => {
     if (detection.confidence === 'low') return
-    setMapDetections(prev => [detection, ...prev])
+    setDetectionCount(c => c + 1)
+    setMapDetections(prev => [detection, ...prev].slice(0, 10))
+  }, [])
+
+  const handleMissionStart = useCallback(() => {
+    setMapDetections([])
+    setDetectionCount(0)
+    setMissionStarted(true)
+    sessionStorage.setItem('missionActive', '1')
+    setView('dashboard')
+  }, [])
+
+  const handleNewMission = useCallback(() => {
+    setMissionStarted(false)
+    sessionStorage.removeItem('missionActive')
+    setMapDetections([])
+    setDetectionCount(0)
+    setShowConfirm(false)
+    setView('setup')
   }, [])
 
   const [galleryMissionFilter, setGalleryMissionFilter] = useState('')
@@ -28,25 +121,45 @@ function App() {
     setView('gallery')
   }, [])
 
-  const labels: Record<View, string> = { dashboard: 'Dashboard', history: 'Historial', gallery: 'Galería' }
+  if (view === 'setup') {
+    return <MissionSetup onStart={handleMissionStart} />
+  }
+
+  const navItems: { key: View; label: string }[] = [
+    { key: 'dashboard', label: 'Dashboard' },
+    { key: 'history', label: 'Historial' },
+    { key: 'gallery', label: 'Galería' },
+  ]
 
   return (
     <div className="app">
+      {showConfirm && (
+        <ConfirmModal
+          onConfirm={handleNewMission}
+          onCancel={() => setShowConfirm(false)}
+        />
+      )}
       <nav className="app-nav">
         <span className="app-nav__brand">AeroSearch AI</span>
-        {(['dashboard', 'history', 'gallery'] as View[]).map(v => (
+        {navItems.map(({ key, label }) => (
           <button
-            key={v}
-            onClick={() => setView(v)}
-            className={`app-nav__btn${view === v ? ' app-nav__btn--active' : ''}`}
+            key={key}
+            onClick={() => setView(key)}
+            className={`app-nav__btn${view === key ? ' app-nav__btn--active' : ''}`}
           >
-            {labels[v]}
+            {label}
           </button>
         ))}
+        <button
+          onClick={() => setShowConfirm(true)}
+          className="app-nav__btn"
+          style={{ marginLeft: 'auto', color: '#FF6D00', fontSize: 11 }}
+        >
+          + Nueva Misión
+        </button>
       </nav>
 
       <div className="app-content">
-        {/* Dashboard siempre montado para mantener los WebSockets activos */}
         <div className={`app-view${view !== 'dashboard' ? ' app-view--hidden' : ''}`}>
           <Dashboard
             lastMessage={lastMessage}
@@ -54,6 +167,7 @@ function App() {
             telemetry={telemetry}
             trail={trail}
             mapDetections={mapDetections}
+            detectionCount={detectionCount}
             onNewDetection={handleNewDetection}
           />
         </div>

@@ -11,9 +11,12 @@ export function useMission(lastMessage: WsMessage | null): MissionState {
   const [trail, setTrail] = useState<Array<{ lat: number; lng: number }>>([])
 
   useEffect(() => {
-    if (!lastMessage) return
+    if (!lastMessage) {
+      setTelemetry(null)
+      setTrail([])
+      return
+    }
 
-    // Según el tipo de mensaje, actualiza el estado correspondiente
     if (lastMessage.type === 'telemetry') {
       setTelemetry(lastMessage.data)
       setTrail(prev => { // agrega punto al rastro

@@ -14,6 +14,7 @@ interface DashboardProps {
   telemetry: DroneTelemetry | null
   trail: Array<{ lat: number; lng: number }>
   mapDetections: Detection[]
+  detectionCount: number
   onNewDetection: (detection: Detection) => void
 }
 
@@ -22,6 +23,7 @@ export function Dashboard({
   telemetry,
   trail,
   mapDetections,
+  detectionCount,
   onNewDetection,
 }: DashboardProps) {
   const { images, fetchImages, getFullImageUrl } = useImageGallery()
@@ -42,14 +44,14 @@ export function Dashboard({
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '1fr .5fr .5fr',
-      gridTemplateRows: '1fr',
-      width: '100%',
-      height: '100%',
+      gridTemplateColumns: '1fr 0.45fr 0.35fr',
+      gridTemplateRows: '100vh',
+      width: '100vw',
+      height: '100vh',
       overflow: 'hidden',
       background: '#0A0E1A',
-      gap: 10,
-      padding: 10,
+      gap: 6,
+      padding: 6,
     }}>
 
       {/* ── Mapa — ocupa todo el alto ── */}
@@ -61,14 +63,14 @@ export function Dashboard({
         onImageClick={setSelectedImage}
       />
 
-      {/* ── Panel telemetria, camara y control ── */}
+      {/* ── Panel misión: telemetría + cámara ── */}
       <div style={{
         display: 'grid',
         gridTemplateRows: 'auto auto auto auto',
         gap: 6,
         alignContent: 'start',
-        overflowY: 'auto',
         minHeight: 0,
+        overflowY: 'auto',
       }}>
 
         {/* Header */}
@@ -81,27 +83,31 @@ export function Dashboard({
         <TelemetryPanel
           telemetry={telemetry}
           isConnected={isConnected}
-          detectionCount={mapDetections.length}
+          detectionCount={detectionCount}
         />
 
         {/* Cámara */}
         <CameraFeed onNewDetection={onNewDetection} />
 
-        {/* Control de vuelo */}
-        <DroneController />
-
       </div>
 
-      {/* ── Panel alertas ── */}
+      {/* ── Panel alertas + control de vuelo ── */}
       <div style={{
-        display: 'grid',
-        gridTemplateRows: 'auto',
-        gap: 10,
-        alignContent: 'center',
-        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
         minHeight: 0,
+        overflow: 'hidden',
       }}>
-        <DetectionAlert detections={mapDetections} />
+
+        {/* Alertas — ocupa el espacio disponible */}
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <DetectionAlert detections={mapDetections} />
+        </div>
+
+        {/* Control de vuelo — tamaño fijo abajo */}
+        <DroneController droneStatus={telemetry?.status} />
+
       </div>
 
       {/* Modal al hacer clic en un punto naranja del mapa */}

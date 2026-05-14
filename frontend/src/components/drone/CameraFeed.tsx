@@ -6,36 +6,36 @@ interface Props {
   onNewDetection?: (detection: Detection) => void
 }
 
-type ViewMode = 'rgb' | 'overlay' | 'thermal'
+type ViewMode = 'rgb' | 'overlay'
 
 export function CameraFeed({ onNewDetection }: Props) {
   const { framePayload, detections, isConnected } = useDetectionFeed('ws://localhost:8000/ws/detection')
   const [viewMode, setViewMode] = useState<ViewMode>('rgb')
-  const lastDetectionRef = useRef<string | null>(null)
+  const forwardedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
-    if (detections.length === 0) return
-    const latest = detections[0]
-    if (latest.id !== lastDetectionRef.current) {
-      lastDetectionRef.current = latest.id
-      onNewDetection?.(latest)
+    for (const det of detections) {
+      if (!forwardedRef.current.has(det.id)) {
+        forwardedRef.current.add(det.id)
+        onNewDetection?.(det)
+      }
     }
   }, [detections, onNewDetection])
 
   const viewLabels: Record<ViewMode, string> = {
-    rgb: 'RGB', overlay: 'OVERLAY', thermal: 'TÉRMICA'
+    rgb: 'RGB', overlay: 'OVERLAY TÉRMICO'
   }
 
   return (
     <div style={{
       background: '#0D1B2A',
       border: '1px solid #1E3A5F',
-      borderRadius: '8px',
-      padding: '12px',
+      borderRadius: '6px',
+      padding: '8px',
       display: 'flex',
       flexDirection: 'column',
-      gap: 8,
-      minHeight: 0
+      gap: 6,
+      minHeight: 0,
     }}>
 
       {/* Header */}
@@ -62,7 +62,7 @@ export function CameraFeed({ onNewDetection }: Props) {
 
       {/* Toggle */}
       <div style={{ display: 'flex', gap: 4 }}>
-        {(['rgb', 'overlay', 'thermal'] as ViewMode[]).map(mode => (
+        {(['rgb', 'overlay'] as ViewMode[]).map(mode => (
           <button
             key={mode}
             onClick={() => setViewMode(mode)}
@@ -86,13 +86,11 @@ export function CameraFeed({ onNewDetection }: Props) {
           <img
             src={`data:image/jpeg;base64,${
               viewMode === 'rgb' ? framePayload.frame
-              : viewMode === 'overlay' ? (framePayload.thermal_overlay ?? framePayload.frame)
-              : framePayload.thermal_frame
+              : (framePayload.thermal_overlay ?? framePayload.frame)
             }`}
             style={{
               width: '100%', height: 'auto',
-              objectFit: 'cover', display: 'block',
-              imageRendering: viewMode === 'thermal' ? 'pixelated' : 'auto'
+              display: 'block',
             }}
             alt="camera feed"
           />

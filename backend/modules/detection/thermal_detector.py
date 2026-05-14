@@ -5,7 +5,7 @@ import time
 # (con distancia y ropa puede bajar, por eso el rango es amplio)
 HUMAN_TEMP_MIN = 28.0
 HUMAN_TEMP_MAX = 40.0
-MIN_BLOB_SIZE = 4  # mínimo de píxeles para considerar detección (en 32x24)
+MIN_BLOB_SIZE = 6  # mínimo de píxeles para considerar detección (en 32x24)
 
 class ThermalDetector:
     def __init__(self):

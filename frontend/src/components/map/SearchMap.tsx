@@ -47,14 +47,16 @@ interface SearchMapProps {
 
 const DEFAULT_CENTER = { lat: -34.6083, lng: -58.3712 }
 
-function InitialCenter({ position }: { position: [number, number] }) {
+function AutoCenter({ position }: { position: [number, number] }) {
   const map = useMap()
-  const centeredRef = useRef(false)
+  const lastRef = useRef<string>('')
 
   useEffect(() => {
-    if (!centeredRef.current && position[0] !== 0 && position[1] !== 0) {
+    if (position[0] === 0 && position[1] === 0) return
+    const key = `${position[0].toFixed(3)},${position[1].toFixed(3)}`
+    if (key !== lastRef.current) {
       map.setView(position, 16)
-      centeredRef.current = true
+      lastRef.current = key
     }
   }, [position, map])
 
@@ -98,7 +100,7 @@ export function SearchMap({ telemetry, detections, trail, savedImages = [], onIm
           attribution="© OpenStreetMap"
         />
 
-        {telemetry && <InitialCenter position={[telemetry.position.lat, telemetry.position.lng]} />}
+        {telemetry && <AutoCenter position={[telemetry.position.lat, telemetry.position.lng]} />}
 
         <CoverageGrid cells={cells} />
 

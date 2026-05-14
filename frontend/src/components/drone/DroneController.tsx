@@ -120,11 +120,18 @@ function Joystick({ onChange, armed }: JoystickProps) {
   )
 }
 
-export function DroneController() {
+interface DroneControllerProps {
+  droneStatus?: string
+}
+
+export function DroneController({ droneStatus }: DroneControllerProps) {
   const [throttle, setThrottle] = useState(0)
   const [pitch, setPitch] = useState(0)
   const [roll, setRoll] = useState(0)
   const [armed, setArmed] = useState(false)
+  const [reversed, setReversed] = useState(false)
+
+  const hovering = droneStatus === 'hover'
 
   const cmdRef = useRef({ throttle: 0, yaw: 0, pitch: 0, roll: 0 })
 
@@ -170,11 +177,11 @@ export function DroneController() {
     <div style={{
       background: '#0D1B2A',
       border: '1px solid #1E3A5F',
-      borderRadius: 8,
-      padding: '10px 12px',
+      borderRadius: 6,
+      padding: '8px 10px',
       display: 'flex',
       flexDirection: 'column',
-      gap: 8,
+      gap: 6,
     }}>
 
       {/* Header */}
@@ -182,31 +189,79 @@ export function DroneController() {
         <span style={{ color: '#78909C', fontSize: 11, fontFamily: 'monospace', letterSpacing: 1 }}>
           CONTROL DE VUELO
         </span>
-        <button
-          onClick={toggleArm}
-          style={{
-            padding: '3px 12px',
-            fontSize: 10,
-            fontFamily: 'monospace',
-            fontWeight: 'bold',
-            letterSpacing: 1,
-            border: `1px solid ${armed ? '#FF5252' : '#37474F'}`,
-            borderRadius: 4,
-            cursor: 'pointer',
-            background: armed ? '#FF525220' : 'transparent',
-            color: armed ? '#FF5252' : '#546E7A',
-            transition: 'all 0.2s',
-          }}
-        >
-          {armed ? '■ DISARM' : '▶ ARM'}
-        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={() => {
+              fetch(`${API}/drone/reverse`, { method: 'POST' }).catch(() => {})
+              setReversed(r => !r)
+            }}
+            style={{
+              padding: '3px 10px',
+              fontSize: 10,
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              letterSpacing: 1,
+              border: `1px solid ${reversed ? '#00BCD4' : '#37474F'}`,
+              borderRadius: 4,
+              cursor: 'pointer',
+              background: reversed ? '#00BCD420' : 'transparent',
+              color: reversed ? '#00BCD4' : '#546E7A',
+              transition: 'all 0.2s',
+            }}
+          >
+            {reversed ? '⟵ REV' : '⟶ FWD'}
+          </button>
+          <button
+            onClick={() => {
+              fetch(`${API}/drone/hover`, { method: 'POST' }).catch(() => {})
+              if (!hovering) {
+                setThrottle(0)
+                setRoll(0)
+                setPitch(0)
+              }
+            }}
+            style={{
+              padding: '3px 10px',
+              fontSize: 10,
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              letterSpacing: 1,
+              border: `1px solid ${hovering ? '#FFC107' : '#37474F'}`,
+              borderRadius: 4,
+              cursor: 'pointer',
+              background: hovering ? '#FFC10720' : 'transparent',
+              color: hovering ? '#FFC107' : '#546E7A',
+              transition: 'all 0.2s',
+            }}
+          >
+            {hovering ? '⏸ HOVER' : '⏸ HOVER'}
+          </button>
+          <button
+            onClick={toggleArm}
+            style={{
+              padding: '3px 12px',
+              fontSize: 10,
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              letterSpacing: 1,
+              border: `1px solid ${armed ? '#FF5252' : '#37474F'}`,
+              borderRadius: 4,
+              cursor: 'pointer',
+              background: armed ? '#FF525220' : 'transparent',
+              color: armed ? '#FF5252' : '#546E7A',
+              transition: 'all 0.2s',
+            }}
+          >
+            {armed ? '■ DISARM' : '▶ ARM'}
+          </button>
+        </div>
       </div>
 
       {/* Controles */}
-      <div style={{ display: 'flex', gap: 14, alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center' }}>
 
         {/* Throttle */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <span style={{ color: '#546E7A', fontSize: 9, fontFamily: 'monospace', letterSpacing: 1 }}>
             THROTTLE
           </span>
@@ -219,7 +274,7 @@ export function DroneController() {
           </span>
 
           {/* Barra visual de fondo + relleno */}
-          <div style={{ position: 'relative', height: 134, width: 36 }}>
+          <div style={{ position: 'relative', height: 110, width: 30 }}>
             {/* Track de fondo */}
             <div style={{
               position: 'absolute', left: '50%', top: 0, bottom: 0,
@@ -244,14 +299,14 @@ export function DroneController() {
               onChange={e => setThrottle(Number(e.target.value))}
               style={{
                 position: 'absolute',
-                width: 134,
-                height: 36,
+                width: 110,
+                height: 30,
                 top: '50%',
                 left: '50%',
                 margin: 0,
                 padding: 0,
                 transform: 'translate(-50%, -50%) rotate(-90deg)',
-                opacity: 0,          // invisible pero funcional
+                opacity: 0,
                 cursor: armed ? 'pointer' : 'not-allowed',
                 zIndex: 2,
               }}
