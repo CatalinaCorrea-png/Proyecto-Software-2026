@@ -6,8 +6,9 @@ from modules.detection.yolo_detector import YoloDetector
 from modules.detection.thermal_detector import ThermalDetector
 from modules.detection.thermal_simulator import ThermalSimulator
 from modules.detection.fusion import fuse_detections
-from core.state import drone_state, search_grid, BASE_LAT, BASE_LNG
-from modules.mapping.grid import CELL_LAT, CELL_LNG, CELL_SIZE_METERS
+import core.state as state
+from core.state import drone_state, BASE_LAT, BASE_LNG, reset_mission
+from modules.mapping.grid import CELL_SIZE_METERS
 from core.config import DRONE_IP, DRONE_UDP_PORT, DRONE_UDP_TX_PORT
 from core.config import CAMERA_SOURCE, CAMERA_INDEX
 from modules.drone.camera import open_camera
@@ -74,6 +75,16 @@ detection_history: list[dict] = []
 
 _simulation_task: asyncio.Task | None = None
 active_mission_id: int | None = None
+_mission_configured: bool = False
+
+class MissionSetupRequest(BaseModel):
+    name: str = "Misión sin nombre"
+    lat: float
+    lng: float
+    altitude: float = 25.0
+    grid_rows: int = 20
+    grid_cols: int = 20
+    cell_size_m: float = 20.0
 
 class DroneCommand(BaseModel):
     throttle: int = 0
@@ -204,6 +215,36 @@ class FrameGrabber:
 def health():
     return {"status": "AeroSearch AI online"}
 
+@app.get("/mission/active")
+def mission_active():
+    return {"active": _mission_configured and drone_state.mission_active}
+
+@app.post("/mission/setup")
+def mission_setup(req: MissionSetupRequest):
+    global _simulation_task, _mission_configured
+    if _simulation_task and not _simulation_task.done():
+        drone_state.mission_active = False
+    _close_mission_db()
+    _mission_configured = True
+
+    grid = reset_mission(
+        lat=req.lat, lng=req.lng, altitude=req.altitude,
+        rows=req.grid_rows, cols=req.grid_cols,
+        cell_size_m=req.cell_size_m,
+    )
+    detection_history.clear()
+    return {
+        "status": "ready",
+        "name": req.name,
+        "lat": req.lat,
+        "lng": req.lng,
+        "altitude": req.altitude,
+        "grid_rows": req.grid_rows,
+        "grid_cols": req.grid_cols,
+        "cell_size_m": req.cell_size_m,
+        "total_cells": grid.rows * grid.cols,
+    }
+
 @app.post("/drone/control")
 def drone_control(cmd: DroneCommand):
     global _last_cmd_time
@@ -253,7 +294,7 @@ async def mission_websocket(websocket: WebSocket):
     await websocket.accept()
     print("🔌 Misión conectada")
 
-    if _simulation_task is None or _simulation_task.done():
+    if _mission_configured and (_simulation_task is None or _simulation_task.done()):
         drone_state.mission_start = time.time()
         drone_state.sim_step = 0
         drone_state.battery = 100.0
@@ -264,10 +305,10 @@ async def mission_websocket(websocket: WebSocket):
             mission = MissionModel(
                 started_at=datetime.now(timezone.utc),
                 initial_battery=drone_state.battery,
-                grid_rows=search_grid.rows,
-                grid_cols=search_grid.cols,
-                grid_center_lat=search_grid.center_lat,
-                grid_center_lng=search_grid.center_lng,
+                grid_rows=state.search_grid.rows,
+                grid_cols=state.search_grid.cols,
+                grid_center_lat=state.search_grid.center_lat,
+                grid_center_lng=state.search_grid.center_lng,
             )
             db.add(mission)
             db.commit()
@@ -291,13 +332,15 @@ async def mission_websocket(websocket: WebSocket):
 
 
 def _snap_step_to_position(spc: int, cols: int, steps_per_cycle: int) -> int:
-    row_f = (drone_state.lat - BASE_LAT) / CELL_LAT - 0.5
+    grid = state.search_grid
+    south_lat = grid.origin_lat - (grid.rows - 0.5) * grid.cell_lat
+    row_f = (drone_state.lat - south_lat) / grid.cell_lat
     row = max(0, round(row_f))
 
     if row % 2 == 0:
-        col_f = (drone_state.lng - BASE_LNG) / CELL_LNG - 0.5
+        col_f = (drone_state.lng - grid.origin_lng) / grid.cell_lng - 0.5
     else:
-        col_f = (cols - 0.5) - (drone_state.lng - BASE_LNG) / CELL_LNG
+        col_f = (cols - 0.5) - (drone_state.lng - grid.origin_lng) / grid.cell_lng
 
     col_f = max(0.0, min(col_f, cols - 1.0))
     pos_h = min(int(col_f * spc), (cols - 1) * spc - 1)
@@ -316,11 +359,11 @@ def _close_mission_db():
             m.ended_at = datetime.now(timezone.utc)
             m.status = "completed"
             m.final_battery = round(drone_state.battery, 1)
-            m.coverage_percent = search_grid.coverage_percent()
+            m.coverage_percent = state.search_grid.coverage_percent()
             m.detections_count = db.query(DetectionModel).filter(
                 DetectionModel.mission_id == active_mission_id
             ).count()
-            for cell in search_grid.cells.values():
+            for cell in state.search_grid.cells.values():
                 if cell["status"] != "unexplored":
                     db.add(GridCellModel(
                         mission_id=active_mission_id,
@@ -343,11 +386,15 @@ def _close_mission_db():
 
 
 async def _simulation_with_grid():
-    spc = int(CELL_SIZE_METERS / 5.0)
-    cols = search_grid.cols
+    grid = state.search_grid
+    spc = int(grid.cell_size_m / 5.0)
+    cols = grid.cols
     steps_horizontal = (cols - 1) * spc
     steps_vertical = spc
     steps_per_cycle = steps_horizontal + steps_vertical
+
+    origin_lat = grid.origin_lat
+    origin_lng = grid.origin_lng
 
     drone_state.mission_active = True
     was_manual = False
@@ -389,20 +436,22 @@ async def _simulation_with_grid():
             row = step // steps_per_cycle
             pos_in_cycle = step % steps_per_cycle
 
+            grid_row = grid.rows - 1 - row
+
             if pos_in_cycle < steps_horizontal:
                 frac = pos_in_cycle / spc
-                lat = BASE_LAT + (row + 0.5) * CELL_LAT
+                lat = origin_lat - (grid_row + 0.5) * grid.cell_lat
                 if row % 2 == 0:
-                    lng = BASE_LNG + (0.5 + frac) * CELL_LNG
+                    lng = origin_lng + (0.5 + frac) * grid.cell_lng
                 else:
-                    lng = BASE_LNG + (cols - 0.5 - frac) * CELL_LNG
+                    lng = origin_lng + (cols - 0.5 - frac) * grid.cell_lng
             else:
                 v_frac = (pos_in_cycle - steps_horizontal + 1) / spc
-                lat = BASE_LAT + (row + 0.5 + v_frac) * CELL_LAT
+                lat = origin_lat - (grid_row + 0.5 - v_frac) * grid.cell_lat
                 if row % 2 == 0:
-                    lng = BASE_LNG + (cols - 0.5) * CELL_LNG
+                    lng = origin_lng + (cols - 0.5) * grid.cell_lng
                 else:
-                    lng = BASE_LNG + 0.5 * CELL_LNG
+                    lng = origin_lng + 0.5 * grid.cell_lng
 
             drone_state.lat = lat
             drone_state.lng = lng
@@ -413,12 +462,12 @@ async def _simulation_with_grid():
         drone_state.status = "hover" if drone_state.sim_direction == 0 and source == "sim" else "flying"
         drone_state.last_update = time.time()
 
-        changed_cells = search_grid.update_position(drone_state.lat, drone_state.lng)
+        changed_cells = state.search_grid.update_position(drone_state.lat, drone_state.lng)
         if changed_cells and grid_clients:
             grid_update = {
                 "type": "grid_update",
                 "cells": changed_cells,
-                "coverage": search_grid.coverage_percent()
+                "coverage": state.search_grid.coverage_percent()
             }
             for client in grid_clients.copy():
                 try:
@@ -451,8 +500,8 @@ async def grid_websocket(websocket: WebSocket):
     grid_clients.append(websocket)
     await websocket.send_text(json.dumps({
         "type": "grid_init",
-        "cells": search_grid.get_all_cells(),
-        "coverage": search_grid.coverage_percent()
+        "cells": state.search_grid.get_all_cells(),
+        "coverage": state.search_grid.coverage_percent()
     }))
     try:
         while True:
@@ -559,13 +608,13 @@ async def detection_websocket(websocket: WebSocket):
                     last_detection_time = now
                     detected_positions.add(pos_key)
 
-                    detection_cell = search_grid.mark_detection(drone_state.lat, drone_state.lng)
+                    detection_cell = state.search_grid.mark_detection(drone_state.lat, drone_state.lng)
                     if detection_cell and grid_clients:
                         await asyncio.gather(*[
                             client.send_text(json.dumps({
                                 "type": "grid_update",
                                 "cells": [detection_cell],
-                                "coverage": search_grid.coverage_percent()
+                                "coverage": state.search_grid.coverage_percent()
                             }))
                             for client in grid_clients.copy()
                         ])

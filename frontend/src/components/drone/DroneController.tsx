@@ -120,13 +120,18 @@ function Joystick({ onChange, armed }: JoystickProps) {
   )
 }
 
-export function DroneController() {
+interface DroneControllerProps {
+  droneStatus?: string
+}
+
+export function DroneController({ droneStatus }: DroneControllerProps) {
   const [throttle, setThrottle] = useState(0)
   const [pitch, setPitch] = useState(0)
   const [roll, setRoll] = useState(0)
   const [armed, setArmed] = useState(false)
   const [reversed, setReversed] = useState(false)
-  const [hovering, setHovering] = useState(false)
+
+  const hovering = droneStatus === 'hover'
 
   const cmdRef = useRef({ throttle: 0, yaw: 0, pitch: 0, roll: 0 })
 
@@ -189,7 +194,6 @@ export function DroneController() {
             onClick={() => {
               fetch(`${API}/drone/reverse`, { method: 'POST' }).catch(() => {})
               setReversed(r => !r)
-              setHovering(false)
             }}
             style={{
               padding: '3px 10px',
@@ -210,7 +214,6 @@ export function DroneController() {
           <button
             onClick={() => {
               fetch(`${API}/drone/hover`, { method: 'POST' }).catch(() => {})
-              setHovering(h => !h)
               if (!hovering) {
                 setThrottle(0)
                 setRoll(0)
