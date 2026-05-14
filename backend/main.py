@@ -459,7 +459,10 @@ async def _simulation_with_grid():
             current_speed = 0.0 if drone_state.sim_direction == 0 else 5.0
 
         drone_state.battery = max(0, drone_state.battery - 0.05)
-        drone_state.status = "hover" if drone_state.sim_direction == 0 and source == "sim" else "flying"
+        if drone_state.sim_direction == 0 and not drone_state.real_telemetry_active and drone_state.cmd_throttle == 0:
+            drone_state.status = "hover"
+        else:
+            drone_state.status = "flying"
         drone_state.last_update = time.time()
 
         changed_cells = state.search_grid.update_position(drone_state.lat, drone_state.lng)
@@ -485,7 +488,7 @@ async def _simulation_with_grid():
                     "timestamp": int(time.time() * 1000)
                 },
                 "battery": round(drone_state.battery, 1),
-                "status": "flying",
+                "status": drone_state.status,
                 "speed": current_speed,
                 "elapsed": elapsed,
                 "source": source,

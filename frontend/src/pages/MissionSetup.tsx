@@ -15,7 +15,7 @@ interface MissionConfig {
 const PRESETS: Record<string, Pick<MissionConfig, 'lat' | 'lng'>> = {
   'Aconcagua':    { lat: -32.6532, lng: -70.0109 },
   'Plaza de Mayo': { lat: -34.6083, lng: -58.3712 },
-  'UNSAM':        { lat: -34.5735, lng: -58.5270 },
+  'UNSAM':        { lat: -34.5793, lng: -58.5227 },
 }
 
 interface Props {
