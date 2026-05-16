@@ -220,10 +220,14 @@ def mission_active():
     return {"active": _mission_configured and drone_state.mission_active}
 
 @app.post("/mission/setup")
-def mission_setup(req: MissionSetupRequest):
+async def mission_setup(req: MissionSetupRequest):
     global _simulation_task, _mission_configured
     if _simulation_task and not _simulation_task.done():
         drone_state.mission_active = False
+        try:
+            await asyncio.wait_for(_simulation_task, timeout=3.0)
+        except (asyncio.TimeoutError, Exception):
+            _simulation_task.cancel()
     _close_mission_db()
     _mission_configured = True
 

@@ -325,7 +325,7 @@ export default function GalleryPage({ initialMissionFilter = '' }: { initialMiss
             <span style={{
               position: 'absolute',
               left: 10, top: '50%', transform: 'translateY(-50%)',
-              color: C.textDim, fontFamily: 'monospace', fontSize: 11, pointerEvents: 'none',
+              color: C.textDim, fontFamily: 'monospace', fontSize: 20, pointerEvents: 'none',
             }}>⌕</span>
             <input
               placeholder="Filtrar por misión..."
