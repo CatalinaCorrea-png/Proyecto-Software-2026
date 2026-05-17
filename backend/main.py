@@ -46,13 +46,20 @@ _close_orphan_missions()
 @asynccontextmanager
 async def lifespan(app):
     await mongo_connect()
-    await start_udp_listener(DRONE_UDP_TX_PORT)
+    # Se guarda el transport para cerrarlo en el shutdown.
+    # Sin esto, el socket UDP quedaba ocupado al reiniciar y el puerto
+    # lanzaba WinError 10048 en el siguiente arranque.
+    udp_transport = await start_udp_listener(DRONE_UDP_TX_PORT)
     asyncio.create_task(hw_watchdog())
     asyncio.create_task(_keepalive_loop())
     yield
+    udp_transport.close()  # libera el puerto UDP al cerrar
     if _grabber is not None:
         _grabber.stop()
-    await mongo_disconnect()
+    try:
+        await mongo_disconnect()
+    except Exception:
+        pass
 
 app = FastAPI(title="AeroSearch AI", lifespan=lifespan)
 app.add_middleware(
@@ -76,6 +83,9 @@ detection_history: list[dict] = []
 _simulation_task: asyncio.Task | None = None
 active_mission_id: int | None = None
 _mission_configured: bool = False
+_mission_name: str = ""
+_mission_altitude: float | None = None
+_mission_cell_size_m: float | None = None
 
 class MissionSetupRequest(BaseModel):
     name: str = "Misión sin nombre"
@@ -221,7 +231,10 @@ def mission_active():
 
 @app.post("/mission/setup")
 async def mission_setup(req: MissionSetupRequest):
-    global _simulation_task, _mission_configured
+    global _simulation_task, _mission_configured, _mission_name, _mission_altitude, _mission_cell_size_m
+    _mission_name = req.name
+    _mission_altitude = req.altitude
+    _mission_cell_size_m = req.cell_size_m
     if _simulation_task and not _simulation_task.done():
         drone_state.mission_active = False
         try:
@@ -307,6 +320,9 @@ async def mission_websocket(websocket: WebSocket):
         db = SessionLocal()
         try:
             mission = MissionModel(
+                name=_mission_name or None,
+                altitude=_mission_altitude,
+                cell_size_m=_mission_cell_size_m,
                 started_at=datetime.now(timezone.utc),
                 initial_battery=drone_state.battery,
                 grid_rows=state.search_grid.rows,
@@ -724,6 +740,7 @@ def list_missions():
         return [
             {
                 "id": m.id,
+                "name": m.name,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
                 "started_at": m.started_at.isoformat() if m.started_at else None,
                 "ended_at": m.ended_at.isoformat() if m.ended_at else None,
@@ -732,6 +749,8 @@ def list_missions():
                 "final_battery": m.final_battery,
                 "coverage_percent": m.coverage_percent,
                 "detections_count": len(m.detections),
+                "altitude": m.altitude,
+                "cell_size_m": m.cell_size_m,
                 "grid_rows": m.grid_rows,
                 "grid_cols": m.grid_cols,
                 "grid_center_lat": m.grid_center_lat,
@@ -739,6 +758,21 @@ def list_missions():
             }
             for m in missions
         ]
+    finally:
+        db.close()
+
+
+@app.delete("/missions/{mission_id}", status_code=204)
+def delete_mission(mission_id: int):
+    db = SessionLocal()
+    try:
+        m = db.query(MissionModel).filter(MissionModel.id == mission_id).first()
+        if not m:
+            raise HTTPException(status_code=404, detail="Mission not found")
+        if m.status == "active":
+            raise HTTPException(status_code=409, detail="Cannot delete an active mission")
+        db.delete(m)
+        db.commit()
     finally:
         db.close()
 
@@ -752,6 +786,7 @@ def get_mission(mission_id: int):
             raise HTTPException(status_code=404, detail="Mission not found")
         return {
             "id": m.id,
+            "name": m.name,
             "created_at": m.created_at.isoformat() if m.created_at else None,
             "started_at": m.started_at.isoformat() if m.started_at else None,
             "ended_at": m.ended_at.isoformat() if m.ended_at else None,
@@ -760,6 +795,8 @@ def get_mission(mission_id: int):
             "final_battery": m.final_battery,
             "coverage_percent": m.coverage_percent,
             "detections_count": m.detections_count,
+            "altitude": m.altitude,
+            "cell_size_m": m.cell_size_m,
             "grid_rows": m.grid_rows,
             "grid_cols": m.grid_cols,
             "grid_center_lat": m.grid_center_lat,

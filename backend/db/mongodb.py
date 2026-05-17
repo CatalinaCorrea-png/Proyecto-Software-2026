@@ -1,3 +1,4 @@
+import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 from core.config import MONGODB_URL, MONGODB_DB
 
@@ -5,14 +6,31 @@ client: AsyncIOMotorClient = None
 db = None
 gridfs: AsyncIOMotorGridFSBucket = None
 
+# Número máximo de intentos y tiempo de espera entre cada uno.
+# Necesario porque MongoDB (especialmente en Docker) puede tardar unos segundos
+# en estar listo para aceptar conexiones después de iniciarse.
+_MAX_RETRIES = 5
+_RETRY_DELAY = 3  # segundos entre intentos
+
 
 async def connect():
     global client, db, gridfs
-    client = AsyncIOMotorClient(MONGODB_URL)
-    db = client[MONGODB_DB]
-    gridfs = AsyncIOMotorGridFSBucket(db)
-    await _ensure_indexes()
-    print(f"✅ MongoDB conectado: {MONGODB_DB}")
+    # Intenta conectarse hasta _MAX_RETRIES veces antes de lanzar error.
+    # serverSelectionTimeoutMS=5000 limita cada intento a 5s en lugar del
+    # default de 30s, para que el ciclo completo no bloquee demasiado tiempo.
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            client = AsyncIOMotorClient(MONGODB_URL, serverSelectionTimeoutMS=5000)
+            db = client[MONGODB_DB]
+            gridfs = AsyncIOMotorGridFSBucket(db)
+            await _ensure_indexes()
+            print(f"✅ MongoDB conectado: {MONGODB_DB}")
+            return
+        except Exception as e:
+            print(f"⚠️  MongoDB intento {attempt}/{_MAX_RETRIES} fallido: {e}")
+            if attempt < _MAX_RETRIES:
+                await asyncio.sleep(_RETRY_DELAY)
+    raise RuntimeError(f"No se pudo conectar a MongoDB tras {_MAX_RETRIES} intentos")
 
 
 async def disconnect():

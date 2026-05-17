@@ -8,6 +8,7 @@ class Mission(Base):
     __tablename__ = "missions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -16,6 +17,8 @@ class Mission(Base):
     final_battery: Mapped[float | None] = mapped_column(Float, nullable=True)
     coverage_percent: Mapped[float | None] = mapped_column(Float, nullable=True)
     detections_count: Mapped[int] = mapped_column(Integer, default=0)
+    altitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cell_size_m: Mapped[float | None] = mapped_column(Float, nullable=True)
     grid_rows: Mapped[int] = mapped_column(Integer)
     grid_cols: Mapped[int] = mapped_column(Integer)
     grid_center_lat: Mapped[float] = mapped_column(Float)

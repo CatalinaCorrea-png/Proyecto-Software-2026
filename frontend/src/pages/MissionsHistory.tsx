@@ -26,8 +26,9 @@ function formatCoord(lat: number, lng: number): string {
   return `${Math.abs(lat).toFixed(4)}° ${latDir}, ${Math.abs(lng).toFixed(4)}° ${lngDir}`
 }
 
-function areaHa(rows: number, cols: number): string {
-  return ((rows * cols * 20 * 20) / 10_000).toFixed(1)
+function areaHa(rows: number, cols: number, cellSize: number | null): string {
+  const size = cellSize ?? 20
+  return ((rows * cols * size * size) / 10_000).toFixed(1)
 }
 
 function batteryUsed(initial: number, final: number | null): string {
@@ -127,9 +128,21 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function MissionCard({ mission, onSelect, onViewGallery }: {
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
+}
+
+function MissionCard({ mission, onSelect, onDelete, onViewGallery }: {
   mission: Mission
   onSelect: () => void
+  onDelete: (id: number) => void
   onViewGallery?: (missionId: string) => void
 }) {
   const [zoneName, setZoneName] = useState<string>('…')
@@ -164,14 +177,59 @@ function MissionCard({ mission, onSelect, onViewGallery }: {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#FF6D00', fontSize: 16 }}>
-            Misión #{mission.id}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#FF6D00', fontSize: 16 }}>
+              {mission.name || `Misión #${mission.id}`}
+            </span>
+            {mission.name && (
+              <span style={{
+                fontFamily: 'monospace', fontSize: 11, color: '#546E7A',
+                background: '#0D1B2A', border: '1px solid #1E2D3D',
+                borderRadius: 4, padding: '1px 6px',
+              }}>
+                #{mission.id}
+              </span>
+            )}
           </div>
-          <div style={{ fontSize: 13, color: '#E0E0E0', marginTop: 3, maxWidth: 260 }}>
+          <div style={{ fontSize: 11, color: '#546E7A', marginTop: 2, fontFamily: 'monospace' }}>
             {zoneName}
           </div>
         </div>
-        <StatusBadge status={mission.status} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <StatusBadge status={mission.status} />
+          {mission.status !== 'active' && (
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                onDelete(mission.id)
+              }}
+              title="Eliminar misión"
+              style={{
+                background: 'none',
+                border: '1px solid #37474F',
+                color: '#546E7A',
+                borderRadius: 6,
+                padding: '4px 6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                transition: 'color .15s, border-color .15s',
+              }}
+              onMouseEnter={e => {
+                const b = e.currentTarget
+                b.style.color = '#FF3D00'
+                b.style.borderColor = '#FF3D00'
+              }}
+              onMouseLeave={e => {
+                const b = e.currentTarget
+                b.style.color = '#546E7A'
+                b.style.borderColor = '#37474F'
+              }}
+            >
+              <TrashIcon />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Zona geográfica */}
@@ -180,7 +238,7 @@ function MissionCard({ mission, onSelect, onViewGallery }: {
           {formatCoord(mission.grid_center_lat, mission.grid_center_lng)}
         </div>
         <div style={{ fontSize: 11, color: '#546E7A', marginTop: 2 }}>
-          Área: {areaHa(mission.grid_rows, mission.grid_cols)} ha
+          Área: {areaHa(mission.grid_rows, mission.grid_cols, mission.cell_size_m)} ha
           &nbsp;·&nbsp;
           Grilla {mission.grid_rows}×{mission.grid_cols}
         </div>
@@ -193,7 +251,7 @@ function MissionCard({ mission, onSelect, onViewGallery }: {
         <StatBox label="Batería usada" value={batteryUsed(mission.initial_battery, mission.final_battery)} accent="#FF6D00" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
         <StatBox
           label="Detecciones"
           value={String(mission.detections_count)}
@@ -202,6 +260,11 @@ function MissionCard({ mission, onSelect, onViewGallery }: {
         <StatBox
           label="Batería final"
           value={mission.final_battery !== null ? `${mission.final_battery.toFixed(1)}%` : '—'}
+        />
+        <StatBox
+          label="Altitud"
+          value={mission.altitude !== null ? `${mission.altitude}m` : '—'}
+          accent="#00BCD4"
         />
       </div>
 
@@ -387,9 +450,38 @@ function MissionDetailPanel({ missionId, onClose, fetchDetail, onViewGallery }: 
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 10
+
 export function MissionsHistory({ onViewGallery }: { onViewGallery?: (missionId: string) => void }) {
-  const { missions, loading, refetch, fetchDetail } = useMissions()
+  const { missions, loading, refetch, fetchDetail, deleteMission } = useMissions()
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [page, setPage] = useState(0)
+  const [search, setSearch] = useState('')
+
+  const filtered = search.trim() === '' ? missions : missions.filter(m => {
+    const q = search.trim().toLowerCase()
+    return (
+      String(m.id).includes(q) ||
+      (m.name ?? '').toLowerCase().includes(q)
+    )
+  })
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+
+  const handleDelete = async (id: number) => {
+    if (!confirm(`¿Eliminar Misión #${id}? Esta acción no se puede deshacer.`)) return
+    await deleteMission(id)
+    setPage(p => {
+      const newTotal = Math.ceil((filtered.length - 1) / PAGE_SIZE)
+      return p >= newTotal ? Math.max(0, newTotal - 1) : p
+    })
+  }
+
+  const handleSearch = (val: string) => {
+    setSearch(val)
+    setPage(0)
+  }
 
   return (
     <div style={{
@@ -398,17 +490,20 @@ export function MissionsHistory({ onViewGallery }: { onViewGallery?: (missionId:
       fontFamily: 'monospace',
     }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 'bold', color: '#FF6D00' }}>
             Historial de Misiones
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: 12, color: '#546E7A' }}>
-            {missions.length} misión{missions.length !== 1 ? 'es' : ''} registrada{missions.length !== 1 ? 's' : ''}
+            {filtered.length !== missions.length
+              ? `${filtered.length} de ${missions.length} misión${missions.length !== 1 ? 'es' : ''}`
+              : `${missions.length} misión${missions.length !== 1 ? 'es' : ''} registrada${missions.length !== 1 ? 's' : ''}`
+            }
           </p>
         </div>
         <button
-          onClick={refetch}
+          onClick={() => refetch()}
           style={{
             background: 'none', border: '1px solid #37474F', color: '#78909C',
             borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 12,
@@ -418,21 +513,120 @@ export function MissionsHistory({ onViewGallery }: { onViewGallery?: (missionId:
         </button>
       </div>
 
+      {/* Search bar */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+        <div style={{ position: 'relative', width: '100%', maxWidth: 520 }}>
+          <span style={{
+            position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+            color: '#546E7A', fontSize: 16, pointerEvents: 'none',
+          }}>⌕</span>
+          <input
+            type="text"
+            placeholder="Buscar por nombre o #ID..."
+            value={search}
+            onChange={e => handleSearch(e.target.value)}
+            style={{
+              width: '100%',
+              background: '#0D1B2A',
+              border: '1px solid #37474F',
+              borderRadius: 8,
+              color: '#E0E0E0',
+              fontFamily: 'monospace',
+              fontSize: 14,
+              padding: '10px 36px 10px 40px',
+              outline: 'none',
+              boxSizing: 'border-box',
+              transition: 'border-color .15s',
+            }}
+            onFocus={e => (e.currentTarget.style.borderColor = '#FF6D00')}
+            onBlur={e => (e.currentTarget.style.borderColor = '#37474F')}
+          />
+          {search && (
+            <button
+              onClick={() => handleSearch('')}
+              style={{
+                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', color: '#546E7A',
+                cursor: 'pointer', fontSize: 18, padding: 0, lineHeight: 1,
+              }}
+            >×</button>
+          )}
+        </div>
+      </div>
+
       {/* Content */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#546E7A' }}>
           Cargando misiones...
         </div>
-      ) : missions.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#37474F' }}>
-          No hay misiones registradas todavía.
+          {missions.length === 0
+            ? 'No hay misiones registradas todavía.'
+            : `Sin resultados para "${search}"`
+          }
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 16 }}>
-          {missions.map(m => (
-            <MissionCard key={m.id} mission={m} onSelect={() => setSelectedId(m.id)} onViewGallery={onViewGallery} />
-          ))}
-        </div>
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, 1fr)',
+            gap: 16,
+          }}>
+            {paginated.map(m => (
+              <MissionCard key={m.id} mission={m} onSelect={() => setSelectedId(m.id)} onDelete={handleDelete} onViewGallery={onViewGallery} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div style={{
+              display: 'flex', justifyContent: 'center', alignItems: 'center',
+              gap: 12, marginTop: 24,
+            }}>
+              <button
+                onClick={() => setPage(p => p - 1)}
+                disabled={page === 0}
+                style={{
+                  background: 'none', border: '1px solid #37474F', color: page === 0 ? '#2A3A4A' : '#78909C',
+                  borderRadius: 6, padding: '5px 14px', cursor: page === 0 ? 'default' : 'pointer', fontSize: 13,
+                }}
+              >
+                ← Anterior
+              </button>
+
+              <div style={{ display: 'flex', gap: 6 }}>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPage(i)}
+                    style={{
+                      width: 28, height: 28,
+                      background: i === page ? 'rgba(255,109,0,0.15)' : 'none',
+                      border: `1px solid ${i === page ? '#FF6D00' : '#37474F'}`,
+                      color: i === page ? '#FF6D00' : '#546E7A',
+                      borderRadius: 6, cursor: 'pointer', fontSize: 12,
+                    }}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page === totalPages - 1}
+                style={{
+                  background: 'none', border: '1px solid #37474F',
+                  color: page === totalPages - 1 ? '#2A3A4A' : '#78909C',
+                  borderRadius: 6, padding: '5px 14px',
+                  cursor: page === totalPages - 1 ? 'default' : 'pointer', fontSize: 13,
+                }}
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {selectedId !== null && (
