@@ -114,6 +114,15 @@ function App() {
     setView('setup')
   }, [])
 
+  const handleStopMission = useCallback(async () => {
+    try {
+      await fetch('http://localhost:8000/mission/stop', { method: 'POST' })
+    } catch { /* backend down */ }
+    setMissionStarted(false)
+    sessionStorage.removeItem('missionActive')
+    setView('setup')
+  }, [])
+
   const [galleryMissionFilter, setGalleryMissionFilter] = useState('')
 
   const handleViewGallery = useCallback((missionId: string) => {
@@ -121,11 +130,13 @@ function App() {
     setView('gallery')
   }, [])
 
-  if (view === 'setup') {
-    return <MissionSetup onStart={handleMissionStart} />
+  const handleNavClick = (key: View) => {
+    if (key === 'dashboard' && !missionStarted) return
+    setView(key)
   }
 
   const navItems: { key: View; label: string }[] = [
+    { key: 'setup', label: 'Nueva Misión' },
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'history', label: 'Historial' },
     { key: 'gallery', label: 'Galería' },
@@ -141,25 +152,39 @@ function App() {
       )}
       <nav className="app-nav">
         <span className="app-nav__brand">AeroSearch AI</span>
-        {navItems.map(({ key, label }) => (
+        {navItems.map(({ key, label }) => {
+          const disabled = key === 'dashboard' && !missionStarted
+          return (
+            <button
+              key={key}
+              onClick={() => {
+                if (key === 'setup' && missionStarted) {
+                  setShowConfirm(true)
+                } else {
+                  handleNavClick(key)
+                }
+              }}
+              disabled={disabled}
+              className={`app-nav__btn${view === key ? ' app-nav__btn--active' : ''}${disabled ? ' app-nav__btn--disabled' : ''}`}
+            >
+              {label}
+            </button>
+          )
+        })}
+        {missionStarted && (
           <button
-            key={key}
-            onClick={() => setView(key)}
-            className={`app-nav__btn${view === key ? ' app-nav__btn--active' : ''}`}
+            onClick={handleStopMission}
+            className="app-nav__btn app-nav__btn--stop"
           >
-            {label}
+            Finalizar Misión
           </button>
-        ))}
-        <button
-          onClick={() => setShowConfirm(true)}
-          className="app-nav__btn"
-          style={{ marginLeft: 'auto', color: '#FF6D00', fontSize: 11 }}
-        >
-          + Nueva Misión
-        </button>
+        )}
       </nav>
 
       <div className="app-content">
+        {view === 'setup' && (
+          <MissionSetup onStart={handleMissionStart} />
+        )}
         <div className={`app-view${view !== 'dashboard' ? ' app-view--hidden' : ''}`}>
           <Dashboard
             lastMessage={lastMessage}

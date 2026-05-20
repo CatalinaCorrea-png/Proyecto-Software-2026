@@ -37,7 +37,7 @@ Thumbs.db
 .vscode/ipch
 
 # imagenes de detecciones
-media/
+media/detections
 
 # datasets demasiado pesados
 datasets/

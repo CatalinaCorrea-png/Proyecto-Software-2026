@@ -43,6 +43,21 @@
   color: #FF6D00;
 }
 
+.app-nav__btn--disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.app-nav__btn--stop {
+  margin-left: auto;
+  color: #FF5252;
+  font-size: 11px;
+}
+
+.app-nav__btn--stop:hover {
+  color: #FF8A80;
+}
+
 .app-content {
   flex: 1;
   min-height: 0;

@@ -13,10 +13,13 @@ ESP32_STREAM_URL = os.getenv("ESP32_STREAM_URL", f"http://{DRONE_IP}/stream")
 DRONE_UDP_PORT = int(os.getenv("DRONE_UDP_PORT", "4210"))   # ESP32 escucha comandos aquí
 DRONE_UDP_TX_PORT = int(os.getenv("DRONE_UDP_TX_PORT", "4211"))  # ESP32 envía telemetría aquí
 
+VIDEO_SOURCE = os.getenv("VIDEO_SOURCE", "media/videos/flight.mp4")
+
 CAMERA_INDEX = {
     "webcam":    (0, True),
     "camo":      (1, True),
     "esp32":     (ESP32_STREAM_URL, False),
+    "video":     (VIDEO_SOURCE, False),
     "synthetic": (None, False)
 }
 

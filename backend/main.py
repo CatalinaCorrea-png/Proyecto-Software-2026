@@ -20,7 +20,7 @@ from routers.missions_mongo import router as missions_mongo_router
 from modules.storage.image_service import save_image
 from modules.storage.schemas import (ImageUploadRequest, DetectionPayload, BoundingBox,)
 from datetime import datetime as _dt
-import json, cv2, numpy as np, base64, asyncio, time, uuid, socket, threading, requests, math
+import json, cv2, numpy as np, base64, asyncio, time, uuid, socket, threading, requests, math, glob, os
 from datetime import datetime, timezone
 from db.database import SessionLocal, init_db
 from db.models import Mission as MissionModel, Detection as DetectionModel, GridCell as GridCellModel
@@ -134,6 +134,15 @@ class FrameGrabber:
             print("📷 Modo sintético")
             return False
 
+        if CAMERA_SOURCE == "video":
+            self._running = True
+            self._thread = threading.Thread(
+                target=self._video_reader_loop, args=(source,), daemon=True
+            )
+            self._thread.start()
+            print(f"✅ Video: {source}")
+            return True
+
         if isinstance(source, str):
             self._stream_url = source
             self._running = True
@@ -209,6 +218,63 @@ class FrameGrabber:
                 with self._lock:
                     self._frame = frame
 
+    def _video_reader_loop(self, path: str):
+        """Lee videos de media/videos/ en rotación, o una URL de YouTube en loop."""
+        if "youtube.com/" in path or "youtu.be/" in path:
+            try:
+                import yt_dlp
+                ydl_opts = {"format": "best[height<=720]", "quiet": True}
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(path, download=False)
+                    path = info["url"]
+            except ImportError:
+                print("yt-dlp no instalado. pip install yt-dlp")
+                return
+            except Exception as e:
+                print(f"Error obteniendo URL de YouTube: {e}")
+                return
+            playlist = [path]
+        else:
+            video_dir = os.path.dirname(path) or "media/videos"
+            exts = (".mp4", ".avi", ".mkv", ".mov", ".webm")
+            playlist = sorted(
+                f for f in glob.glob(os.path.join(video_dir, "*"))
+                if os.path.splitext(f)[1].lower() in exts
+            )
+            if not playlist:
+                print(f"No hay videos en {video_dir}")
+                return
+
+        idx = 0
+        while self._running:
+            video = playlist[idx % len(playlist)]
+            cap = cv2.VideoCapture(video)
+            if not cap.isOpened():
+                print(f"No se pudo abrir: {video}, saltando...")
+                idx += 1
+                time.sleep(1)
+                continue
+
+            fps = cap.get(cv2.CAP_PROP_FPS) or 30
+            delay = 1.0 / fps
+            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            if w and h:
+                self.frame_w = w
+                self.frame_h = h
+            print(f"Reproduciendo: {os.path.basename(video)}")
+
+            while self._running:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                with self._lock:
+                    self._frame = frame
+                time.sleep(delay)
+
+            cap.release()
+            idx += 1
+
     def grab(self) -> np.ndarray | None:
         with self._lock:
             return self._frame.copy() if self._frame is not None else None
@@ -228,6 +294,22 @@ def health():
 @app.get("/mission/active")
 def mission_active():
     return {"active": _mission_configured and drone_state.mission_active}
+
+@app.post("/mission/stop")
+async def mission_stop():
+    global _simulation_task, _mission_configured
+    if not drone_state.mission_active and (_simulation_task is None or _simulation_task.done()):
+        raise HTTPException(status_code=400, detail="No hay misión activa")
+    drone_state.mission_active = False
+    if _simulation_task and not _simulation_task.done():
+        try:
+            await asyncio.wait_for(_simulation_task, timeout=3.0)
+        except (asyncio.TimeoutError, Exception):
+            _simulation_task.cancel()
+    _close_mission_db()
+    _mission_configured = False
+    drone_state.status = "idle"
+    return {"status": "stopped"}
 
 @app.post("/mission/setup")
 async def mission_setup(req: MissionSetupRequest):
