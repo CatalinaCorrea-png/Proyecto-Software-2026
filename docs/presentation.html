@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AeroSearch AI — Presentación</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css" id="theme" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css" />
+
+  <style>
+    :root {
+      --bg:        #0A0E1A;
+      --bg-card:   #0D1B2A;
+      --border:    #1E3A5F;
+      --accent:    #FF6D00;
+      --accent-2:  #00BCD4;
+      --ok:        #00C853;
+      --warn:      #FFC107;
+      --err:       #FF5252;
+      --text:      #E0E0E0;
+      --muted:     #78909C;
+      --mono:      'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+    .reveal { font-family: var(--mono); color: var(--text); }
+    .reveal .slides section { text-align: left; }
+    body, .reveal-viewport { background: var(--bg) !important; }
+
+    .reveal h1, .reveal h2, .reveal h3 { font-family: var(--mono); color: var(--accent); text-transform: none; letter-spacing: 0; }
+    .reveal h1 { font-size: 1.9em; }
+    .reveal h2 { font-size: 1.2em; margin-bottom: 0.4em; }
+    .reveal h3 { font-size: 0.9em; color: var(--accent-2); }
+    .reveal p, .reveal li { font-size: 0.65em; line-height: 1.45; }
+    .reveal strong { color: var(--warn); }
+    .reveal em { color: var(--accent-2); font-style: normal; }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-size: 0.5em;
+      color: var(--muted);
+      letter-spacing: 1px;
+      margin-right: 4px;
+    }
+    .tag.accent { border-color: var(--accent); color: var(--accent); }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 8px 0;
+    }
+    .card .title { color: var(--accent); font-weight: bold; font-size: 0.55em; letter-spacing: 1px; margin-bottom: 5px; }
+    .card p { font-size: 0.6em; }
+    .card ul li { font-size: 0.6em; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.55em;
+      background: rgba(255,109,0,0.15);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      margin: 2px;
+    }
+    .pill.cyan { background: rgba(0,188,212,0.15); color: var(--accent-2); border-color: var(--accent-2); }
+    .pill.green { background: rgba(0,200,83,0.15); color: var(--ok); border-color: var(--ok); }
+    .pill.yellow { background: rgba(255,193,7,0.15); color: var(--warn); border-color: var(--warn); }
+    .pill.muted { background: transparent; color: var(--muted); border-color: var(--border); }
+
+    .footnote { color: var(--muted); font-size: 0.45em; letter-spacing: 1px; margin-top: 16px; }
+
+    .reveal pre, .reveal code { font-family: var(--mono); font-size: 0.55em; }
+    .reveal pre { background: #050810; border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; }
+
+    /* Cover slide */
+    .cover { text-align: center !important; }
+    .cover h1 { font-size: 2.4em; margin-bottom: 0; }
+    .cover .subtitle { color: var(--muted); font-size: 0.7em; letter-spacing: 4px; }
+    .cover .badge { margin-top: 30px; }
+    .blink { animation: blink 1.5s infinite; }
+    @keyframes blink { 0%, 60% { opacity: 1; } 70%, 100% { opacity: 0.2; } }
+
+    .arrow { color: var(--muted); margin: 0 6px; font-size: 0.7em; }
+    ul { list-style: none; padding-left: 0; }
+    ul li::before { content: '▸ '; color: var(--accent); }
+
+    /* Layout helpers */
+    .flow-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 12px 0; }
+    .flow-step {
+      flex: 1; text-align: center;
+      background: var(--bg-card); border: 1px solid var(--border);
+      padding: 8px 4px; border-radius: 6px; font-size: 0.5em;
+    }
+    .flow-step .num { color: var(--accent); font-weight: bold; font-size: 1.1em; display: block; margin-bottom: 4px; }
+    .flow-step .lbl { color: var(--text); }
+  </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ──────────────  SLIDE 1 · COVER  ────────────── -->
+<section class="cover" data-background-color="#0A0E1A">
+  <div style="margin-top: 40px;">
+    <span class="tag accent">SAR · DRONES · IA</span>
+  </div>
+  <h1>AeroSearch <span class="blink">AI</span></h1>
+  <div class="subtitle">BÚSQUEDA Y RESCATE AUTÓNOMA</div>
+  <div class="card" style="max-width: 600px; margin: 40px auto 0;">
+    <p style="margin: 0; text-align: center; color: var(--muted);">
+      Sistema de búsqueda y rescate con drones autónomos<br/>
+      e inteligencia artificial en tiempo real
+    </p>
+  </div>
+  <div class="footnote">UNSAM · PDS · 2026</div>
+</section>
+
+
+<!-- ──────────────  SLIDE 2 · PROBLEMA + SOLUCIÓN  ────────────── -->
+<section data-background-color="#0A0E1A">
+  <h2>El problema</h2>
+  <p>
+    Una persona se pierde en una zona montañosa.
+    Los equipos de rescate <strong>tardan horas</strong> en recorrer el terreno a pie,
+    contra-reloj y con visibilidad limitada.
+  </p>
+
+  <h2 style="margin-top: 30px;">Nuestra propuesta</h2>
+  <div class="grid-3" style="margin-top: 10px;">
+    <div class="card">
+      <div class="title">DRON AUTÓNOMO</div>
+      <p style="font-size: 0.75em; margin: 0;">Recorre el área en serpentina sin operador continuo.</p>
+    </div>
+    <div class="card">
+      <div class="title">IA EN VIVO</div>
+      <p style="font-size: 0.75em; margin: 0;">Detección de personas frame a frame: RGB + térmica.</p>
+    </div>
+    <div class="card">
+      <div class="title">MAPA EN TIEMPO REAL</div>
+      <p style="font-size: 0.75em; margin: 0;">Cada hallazgo geolocalizado, persistido y visible al instante.</p>
+    </div>
+  </div>
+
+  <p class="footnote">→ Menos tiempo, más cobertura, sin exponer a rescatistas en terreno hostil.</p>
+</section>
+
+
+<!-- ──────────────  SLIDE 3 · MISSION SETUP  ────────────── -->
+<section data-background-color="#0A0E1A">
+  <h2>1 · Configurar la misión</h2>
+  <p>Antes de despegar, el operador define la zona y la grilla de búsqueda.</p>
+
+  <div class="grid-2" style="margin-top: 14px;">
+    <div class="card">
+      <div class="title">PARÁMETROS</div>
+      <ul style="margin: 0;">
+        <li>Coordenadas de inicio <span class="pill muted">lat / lng</span></li>
+        <li>Altitud de vuelo <span class="pill muted">m</span></li>
+        <li>Grilla: filas × columnas</li>
+        <li>Tamaño de celda <span class="pill muted">m</span></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="title">PRESETS RÁPIDOS</div>
+      <div style="margin-top: 6px;">
+        <span class="pill">Aconcagua</span>
+        <span class="pill">Plaza de Mayo</span>
+        <span class="pill">UNSAM</span>
+      </div>
+      <p style="font-size: 0.65em; color: var(--muted); margin-top: 14px;">
+        Cada preset carga coordenadas reales · cálculo automático del área total
+      </p>
+    </div>
+  </div>
+
+  <pre style="margin-top: 14px;"><code class="language-http">POST /mission/setup
+{ name, lat, lng, altitude, grid_rows, grid_cols, cell_size_m }</code></pre>
+
+  <p class="footnote">→ El backend cierra cualquier misión anterior y crea una nueva activa en SQLite.</p>
+</section>
+
+
+<!-- ──────────────  SLIDE 4 · BARRIDO + COVERAGE  ────────────── -->
+<section data-background-color="#0A0E1A">
+  <h2>2 · Barrido autónomo</h2>
+  <p>
+    El dron arranca un <em>barrido en serpentina</em>, celda por celda, pasando
+    por el <strong>centro de cada cuadrante</strong>.
+  </p>
+
+  <div class="flow-row">
+    <div class="flow-step"><span class="num">·</span><span class="lbl">GRIS<br/>Sin explorar</span></div>
+    <span class="arrow">→</span>
+    <div class="flow-step" style="border-color: var(--accent-2);">
+      <span class="num" style="color: var(--accent-2);">▣</span>
+      <span class="lbl">CELESTE<br/>Explorada</span>
+    </div>
+    <span class="arrow">→</span>
+    <div class="flow-step" style="border-color: var(--accent);">
+      <span class="num">●</span>
+      <span class="lbl">NARANJA<br/>Detección</span>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top: 14px;">
+    <div class="card">
+      <div class="title">EN EL MAPA</div>
+      <ul style="margin: 0;">
+        <li>Posición del dron en vivo</li>
+        <li>Rastro (trail) de últimos 200 pts</li>
+        <li>Cobertura % global</li>
+        <li>Auto-recentrado al iniciar misión</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="title">CONTROL EXTRA</div>
+      <ul style="margin: 0;">
+        <li><strong>HOVER</strong> · pausar en el lugar</li>
+        <li><strong>REVERSE</strong> · invertir barrido</li>
+        <li><strong>+ Nueva Misión</strong> con confirmación</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ──────────────  SLIDE 5 · IA · YOLO + TÉRMICA + FUSIÓN  ────────────── -->
+<section data-background-color="#0A0E1A">
+  <h2>3 · Detección fusionada</h2>
+  <p>Cada frame del video pasa por <strong>dos modelos en paralelo</strong> y se fusionan.</p>
+
+  <div class="flow-row">
+    <div class="flow-step" style="border-color: var(--ok);">
+      <span class="num" style="color: var(--ok);">YOLO v8</span>
+      <span class="lbl">Fine-tuneado<br/>en RGB</span>
+    </div>
+    <span class="arrow">+</span>
+    <div class="flow-step" style="border-color: var(--err);">
+      <span class="num" style="color: var(--err);">TÉRMICA</span>
+      <span class="lbl">Blob detection<br/>sobre firmas calor</span>
+    </div>
+    <span class="arrow">=</span>
+    <div class="flow-step" style="border-color: var(--accent);">
+      <span class="num">FUSION</span>
+      <span class="lbl">RGB ∩ térmica<br/>↑ confianza</span>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top: 18px;">
+    <div class="card">
+      <div class="title">PIPELINE</div>
+      <ul style="margin: 0;">
+        <li><em>asyncio.gather</em> + <em>asyncio.to_thread</em></li>
+        <li>YOLO y térmica corren en paralelo</li>
+        <li>El streaming nunca se bloquea</li>
+        <li>Cooldown de 3 s entre detecciones</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="title">CONFIANZA</div>
+      <div style="margin-top: 6px;">
+        <span class="pill green">HIGH · ambos coinciden</span><br/>
+        <span class="pill yellow">MEDIUM · solo una fuente fuerte</span><br/>
+        <span class="pill" style="border-color: var(--err); color: var(--err); background: rgba(255,82,82,0.15);">LOW · señal débil</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="footnote">→ Cada detección se geolocaliza, se persiste en SQLite y la imagen JPEG va a MongoDB / GridFS.</p>
+</section>
+
+
+<!-- ──────────────  SLIDE 6 · HARDWARE  ────────────── -->
+<section data-background-color="#0A0E1A">
+  <h2>4 · Hardware · ESP32-CAM</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="title">EL DRON HACE 3 COSAS</div>
+      <ul style="margin: 0;">
+        <li><em>MJPEG stream</em> · video al backend</li>
+        <li><em>UDP RX</em> · throttle, pitch, roll, yaw</li>
+        <li><em>UDP TX</em> · GPS + altitud + estado</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="title">ESTABILIZACIÓN</div>
+      <ul style="margin: 0;">
+        <li>Giroscopio + acelerómetro <span class="pill muted">MPU6500</span></li>
+        <li>PID corriendo en el ESP32</li>
+        <li>Firmware en C++ · PlatformIO</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="footnote">→ Control manual desde la UI: joystick virtual con throttle, pitch y roll en vivo.</p>
+</section>
+
+
+<!-- ──────────────  SLIDE 7 · ARQUITECTURA  ────────────── -->
+<section data-background-color="#0A0E1A">
+  <h2>Arquitectura</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="title">FRONTEND</div>
+      <p style="font-size: 0.7em; margin: 6px 0;">
+        <span class="pill cyan">React + TypeScript</span>
+        <span class="pill cyan">Leaflet</span>
+        <span class="pill cyan">WebSockets</span>
+      </p>
+      <p style="font-size: 0.65em; color: var(--muted); margin: 0;">
+        Mapa interactivo, telemetría y video en vivo, persistencia de sesión con sessionStorage.
+      </p>
+    </div>
+    <div class="card">
+      <div class="title">BACKEND</div>
+      <p style="font-size: 0.7em; margin: 6px 0;">
+        <span class="pill">FastAPI</span>
+        <span class="pill">asyncio</span>
+        <span class="pill">YOLOv8</span>
+        <span class="pill">MediaPipe</span>
+      </p>
+      <p style="font-size: 0.65em; color: var(--muted); margin: 0;">
+        WebSockets de telemetría y grid, inferencia en threads, fusión de detecciones.
+      </p>
+    </div>
+    <div class="card">
+      <div class="title">HARDWARE</div>
+      <p style="font-size: 0.7em; margin: 6px 0;">
+        <span class="pill yellow">ESP32-CAM</span>
+        <span class="pill yellow">MPU6500</span>
+        <span class="pill yellow">UDP + MJPEG</span>
+      </p>
+      <p style="font-size: 0.65em; color: var(--muted); margin: 0;">
+        C++ · PlatformIO. PID estabilización. Fallback a sim.
+      </p>
+    </div>
+    <div class="card">
+      <div class="title">PERSISTENCIA</div>
+      <p style="font-size: 0.7em; margin: 6px 0;">
+        <span class="pill green">SQLite</span>
+        <span class="pill green">MongoDB / GridFS</span>
+      </p>
+      <p style="font-size: 0.65em; color: var(--muted); margin: 0;">
+        Misiones, detecciones y grilla en SQLite. Imágenes JPEG en MongoDB.
+      </p>
+    </div>
+  </div>
+
+  <p class="footnote">→ Todo el pipeline corre en milisegundos: frame → IA → mapa.</p>
+</section>
+
+
+<!-- ──────────────  SLIDE 8 · CIERRE  ────────────── -->
+<section class="cover" data-background-color="#0A0E1A">
+  <div style="margin-top: 40px;">
+    <span class="tag accent">GRACIAS</span>
+  </div>
+  <h1 style="margin-top: 20px;">AeroSearch <span style="color: var(--accent-2);">AI</span></h1>
+  <div class="subtitle" style="margin-top: 10px;">ROBÓTICA · VISIÓN · TIEMPO REAL</div>
+
+  <div class="grid-3" style="margin-top: 40px; max-width: 800px; margin-left: auto; margin-right: auto;">
+    <div class="card" style="text-align: center;">
+      <div class="title">+ RÁPIDA</div>
+      <p style="font-size: 0.7em; margin: 0; color: var(--muted);">Cobertura aérea en minutos, no horas.</p>
+    </div>
+    <div class="card" style="text-align: center;">
+      <div class="title">+ EFICIENTE</div>
+      <p style="font-size: 0.7em; margin: 0; color: var(--muted);">IA filtra la atención humana a las zonas con señal.</p>
+    </div>
+    <div class="card" style="text-align: center;">
+      <div class="title">+ SEGURA</div>
+      <p style="font-size: 0.7em; margin: 0; color: var(--muted);">El dron va primero. Los rescatistas, después.</p>
+    </div>
+  </div>
+
+  <p class="footnote" style="margin-top: 40px;">¿Lo demostramos en vivo?</p>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: true,
+    transition: 'slide',
+    backgroundTransition: 'fade',
+    plugins: [ RevealHighlight, RevealNotes ],
+  });
+</script>
+</body>
+</html>
