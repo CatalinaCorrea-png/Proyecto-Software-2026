@@ -3,12 +3,13 @@ import { MissionSetup } from './pages/MissionSetup'
 import { Dashboard } from './pages/Dashboard'
 import { MissionsHistory } from './pages/MissionsHistory'
 import GalleryPage from './pages/GalleryPage'
+import { StatsDashboard } from './pages/StatsDashboard'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useMission } from './hooks/useMission'
 import type { Detection } from './types'
 import './App.css'
 
-type View = 'setup' | 'dashboard' | 'history' | 'gallery'
+type View = 'setup' | 'dashboard' | 'history' | 'gallery' | 'stats'
 
 function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -105,14 +106,19 @@ function App() {
     setView('dashboard')
   }, [])
 
-  const handleNewMission = useCallback(() => {
+  const handleNewMission = useCallback(async () => {
+    if (missionStarted) {
+      try {
+        await fetch('http://localhost:8000/mission/stop', { method: 'POST' })
+      } catch { /* backend down */ }
+    }
     setMissionStarted(false)
     sessionStorage.removeItem('missionActive')
     setMapDetections([])
     setDetectionCount(0)
     setShowConfirm(false)
     setView('setup')
-  }, [])
+  }, [missionStarted])
 
   const handleStopMission = useCallback(async () => {
     try {
@@ -140,6 +146,7 @@ function App() {
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'history', label: 'Historial' },
     { key: 'gallery', label: 'Galería' },
+    { key: 'stats', label: 'Estadísticas' },
   ]
 
   return (
@@ -200,6 +207,11 @@ function App() {
         {view === 'gallery' && (
           <div className="app-view app-content--scrollable">
             <GalleryPage initialMissionFilter={galleryMissionFilter} />
+          </div>
+        )}
+        {view === 'stats' && (
+          <div className="app-view app-content--scrollable">
+            <StatsDashboard />
           </div>
         )}
       </div>

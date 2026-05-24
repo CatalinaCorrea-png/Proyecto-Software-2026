@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 from db.mongodb import connect as mongo_connect, disconnect as mongo_disconnect
 from routers.images import router as images_router
 from routers.missions_mongo import router as missions_mongo_router
+from routers.stats import router as stats_router
 from modules.storage.image_service import save_image
 from modules.storage.schemas import (ImageUploadRequest, DetectionPayload, BoundingBox,)
 from datetime import datetime as _dt
@@ -71,6 +72,7 @@ app.add_middleware(
 
 app.include_router(images_router)
 app.include_router(missions_mongo_router)
+app.include_router(stats_router)
 
 yolo = YoloDetector()
 thermal = ThermalDetector()
