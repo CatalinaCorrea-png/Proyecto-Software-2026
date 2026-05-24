@@ -13,6 +13,8 @@ mediapipe
 python-dotenv
 yt-dlp
 
+pandas
+
 # For MongoDB
 motor==3.6.0
 pymongo==4.9.2
