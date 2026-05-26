@@ -12,7 +12,8 @@ def get_overview():
             """SELECT id, name, status, started_at, ended_at,
                       initial_battery, final_battery, coverage_percent,
                       detections_count, cell_size_m, grid_rows, grid_cols
-               FROM missions""",
+               FROM missions
+               ORDER BY id ASC""",
             conn,
         )
         detections_df = pd.read_sql(
