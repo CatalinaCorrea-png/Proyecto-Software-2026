@@ -1,6 +1,5 @@
 import { useState } from 'react'
-
-const API = 'http://localhost:8000'
+import { authFetch } from '../utils/authFetch'
 
 interface MissionConfig {
   name: string
@@ -46,9 +45,8 @@ export function MissionSetup({ onStart }: Props) {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API}/mission/setup`, {
+      const res = await authFetch('/mission/setup', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
       })
       if (!res.ok) throw new Error(`Error ${res.status}`)

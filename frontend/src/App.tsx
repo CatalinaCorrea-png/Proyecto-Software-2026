@@ -4,6 +4,8 @@ import { Dashboard } from './pages/Dashboard'
 import { MissionsHistory } from './pages/MissionsHistory'
 import GalleryPage from './pages/GalleryPage'
 import { StatsDashboard } from './pages/StatsDashboard'
+import { AuthPage } from './pages/AuthPage'
+import { authFetch } from './utils/authFetch'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useMission } from './hooks/useMission'
 import type { Detection } from './types'
@@ -63,6 +65,16 @@ function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('aerosearch_token'))
+  const [userEmail, setUserEmail] = useState(() => localStorage.getItem('aerosearch_email') || '')
+
+  const handleAuthLogin = useCallback((token: string, email: string) => {
+    localStorage.setItem('aerosearch_token', token)
+    localStorage.setItem('aerosearch_email', email)
+    setIsAuthenticated(true)
+    setUserEmail(email)
+  }, [])
+
   const hasMission = sessionStorage.getItem('missionActive') === '1'
   const [view, setView] = useState<View>(hasMission ? 'dashboard' : 'setup')
   const [missionStarted, setMissionStarted] = useState(hasMission)
@@ -70,7 +82,7 @@ function App() {
 
   useEffect(() => {
     if (!hasMission) return
-    fetch('http://localhost:8000/mission/active')
+    authFetch('/mission/active')
       .then(r => r.json())
       .then(data => {
         if (!data.active) {
@@ -109,7 +121,7 @@ function App() {
   const handleNewMission = useCallback(async () => {
     if (missionStarted) {
       try {
-        await fetch('http://localhost:8000/mission/stop', { method: 'POST' })
+        await authFetch('/mission/stop', { method: 'POST' })
       } catch { /* backend down */ }
     }
     setMissionStarted(false)
@@ -122,12 +134,25 @@ function App() {
 
   const handleStopMission = useCallback(async () => {
     try {
-      await fetch('http://localhost:8000/mission/stop', { method: 'POST' })
+      await authFetch('/mission/stop', { method: 'POST' })
     } catch { /* backend down */ }
     setMissionStarted(false)
     sessionStorage.removeItem('missionActive')
     setView('setup')
   }, [])
+
+  const handleLogout = useCallback(async () => {
+    if (missionStarted) {
+      try { await authFetch('/mission/stop', { method: 'POST' }) } catch { /* backend down */ }
+    }
+    localStorage.removeItem('aerosearch_token')
+    localStorage.removeItem('aerosearch_email')
+    sessionStorage.removeItem('missionActive')
+    setIsAuthenticated(false)
+    setUserEmail('')
+    setMissionStarted(false)
+    setView('setup')
+  }, [missionStarted])
 
   const [galleryMissionFilter, setGalleryMissionFilter] = useState('')
 
@@ -148,6 +173,10 @@ function App() {
     { key: 'gallery', label: 'Galería' },
     { key: 'stats', label: 'Estadísticas' },
   ]
+
+  if (!isAuthenticated) {
+    return <AuthPage onLogin={handleAuthLogin} />
+  }
 
   return (
     <div className="app">
@@ -178,14 +207,36 @@ function App() {
             </button>
           )
         })}
-        {missionStarted && (
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {missionStarted && (
+            <button
+              onClick={handleStopMission}
+              className="app-nav__btn app-nav__btn--stop"
+              style={{ marginLeft: 0 }}
+            >
+              Finalizar Misión
+            </button>
+          )}
+          <span style={{ color: '#546E7A', fontSize: 10, fontFamily: 'monospace', letterSpacing: 1 }}>
+            {userEmail}
+          </span>
           <button
-            onClick={handleStopMission}
-            className="app-nav__btn app-nav__btn--stop"
+            onClick={handleLogout}
+            style={{
+              background: 'transparent',
+              border: '1px solid #37474F',
+              borderRadius: 3,
+              color: '#546E7A',
+              fontFamily: 'monospace',
+              fontSize: 10,
+              padding: '3px 10px',
+              cursor: 'pointer',
+              letterSpacing: 1,
+            }}
           >
-            Finalizar Misión
+            SALIR
           </button>
-        )}
+        </div>
       </nav>
 
       <div className="app-content">

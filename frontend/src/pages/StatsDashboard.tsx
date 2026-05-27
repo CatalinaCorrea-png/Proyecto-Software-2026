@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend, AreaChart, Area, CartesianGrid,
 } from 'recharts'
+import { authFetch } from '../utils/authFetch'
 
 interface OverviewData {
   detections_per_mission: { id: number; label: string; count: number }[]
@@ -56,7 +57,7 @@ export function StatsDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/stats/overview')
+    authFetch('/api/stats/overview')
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()

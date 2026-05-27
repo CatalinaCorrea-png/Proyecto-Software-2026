@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from modules.drone.simulator import get_current_telemetry
@@ -18,6 +18,8 @@ from db.mongodb import connect as mongo_connect, disconnect as mongo_disconnect
 from routers.images import router as images_router
 from routers.missions_mongo import router as missions_mongo_router
 from routers.stats import router as stats_router
+from routers.auth import router as auth_router, get_current_user
+from db.models import User
 from modules.storage.image_service import save_image
 from modules.storage.schemas import (ImageUploadRequest, DetectionPayload, BoundingBox,)
 from datetime import datetime as _dt
@@ -73,6 +75,7 @@ app.add_middleware(
 app.include_router(images_router)
 app.include_router(missions_mongo_router)
 app.include_router(stats_router)
+app.include_router(auth_router)
 
 yolo = YoloDetector()
 thermal = ThermalDetector()
@@ -88,6 +91,7 @@ _mission_configured: bool = False
 _mission_name: str = ""
 _mission_altitude: float | None = None
 _mission_cell_size_m: float | None = None
+_active_user_id: int | None = None
 
 class MissionSetupRequest(BaseModel):
     name: str = "Misión sin nombre"
@@ -314,8 +318,9 @@ async def mission_stop():
     return {"status": "stopped"}
 
 @app.post("/mission/setup")
-async def mission_setup(req: MissionSetupRequest):
-    global _simulation_task, _mission_configured, _mission_name, _mission_altitude, _mission_cell_size_m
+async def mission_setup(req: MissionSetupRequest, user: User = Depends(get_current_user)):
+    global _simulation_task, _mission_configured, _mission_name, _mission_altitude, _mission_cell_size_m, _active_user_id
+    _active_user_id = user.id
     _mission_name = req.name
     _mission_altitude = req.altitude
     _mission_cell_size_m = req.cell_size_m
@@ -404,6 +409,7 @@ async def mission_websocket(websocket: WebSocket):
         db = SessionLocal()
         try:
             mission = MissionModel(
+                user_id=_active_user_id,
                 name=_mission_name or None,
                 altitude=_mission_altitude,
                 cell_size_m=_mission_cell_size_m,
@@ -817,10 +823,12 @@ async def detection_websocket(websocket: WebSocket):
 
 
 @app.get("/missions")
-def list_missions():
+def list_missions(user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:
-        missions = db.query(MissionModel).order_by(MissionModel.created_at.desc()).all()
+        missions = db.query(MissionModel).filter(
+            MissionModel.user_id == user.id
+        ).order_by(MissionModel.created_at.desc()).all()
         return [
             {
                 "id": m.id,
@@ -847,12 +855,14 @@ def list_missions():
 
 
 @app.delete("/missions/{mission_id}", status_code=204)
-def delete_mission(mission_id: int):
+def delete_mission(mission_id: int, user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:
         m = db.query(MissionModel).filter(MissionModel.id == mission_id).first()
         if not m:
             raise HTTPException(status_code=404, detail="Mission not found")
+        if m.user_id != user.id:
+            raise HTTPException(status_code=403, detail="No tenés permiso para eliminar esta misión")
         if m.status == "active":
             raise HTTPException(status_code=409, detail="Cannot delete an active mission")
         db.delete(m)
@@ -862,12 +872,14 @@ def delete_mission(mission_id: int):
 
 
 @app.get("/missions/{mission_id}")
-def get_mission(mission_id: int):
+def get_mission(mission_id: int, user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:
         m = db.query(MissionModel).filter(MissionModel.id == mission_id).first()
         if not m:
             raise HTTPException(status_code=404, detail="Mission not found")
+        if m.user_id != user.id:
+            raise HTTPException(status_code=403, detail="No tenés permiso para ver esta misión")
         return {
             "id": m.id,
             "name": m.name,

@@ -24,6 +24,7 @@ def _migrate():
             ("name",        "TEXT"),
             ("altitude",    "REAL"),
             ("cell_size_m", "REAL"),
+            ("user_id",     "INTEGER"),
         ]:
             if col not in cols:
                 conn.execute(text(f"ALTER TABLE missions ADD COLUMN {col} {definition}"))

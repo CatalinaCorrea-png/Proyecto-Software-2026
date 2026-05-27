@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query, Depends
 from fastapi.responses import Response
 from bson import ObjectId
 
@@ -10,6 +10,9 @@ from modules.storage.image_service import save_image, get_full_image
 from modules.storage.schemas import (
     ImageUploadRequest, DetectionPayload, ImageResponse, ImageListResponse,
 )
+from routers.auth import get_current_user
+from db.models import User, Mission as MissionModel
+from db.database import SessionLocal
 
 router = APIRouter(prefix="/api/images", tags=["images"])
 
@@ -124,10 +127,26 @@ async def list_images(
     has_detections: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, le=500),
+    user: User = Depends(get_current_user),
 ):
-    query: dict = {}
+    db = SessionLocal()
+    try:
+        user_mission_ids = [
+            str(m.id) for m in db.query(MissionModel).filter(MissionModel.user_id == user.id).all()
+        ]
+    finally:
+        db.close()
+
+    if not user_mission_ids:
+        return ImageListResponse(items=[], total=0, page=page, page_size=page_size)
+
     if mission_id:
-        query["mission_id"] = mission_id
+        if mission_id not in user_mission_ids:
+            return ImageListResponse(items=[], total=0, page=page, page_size=page_size)
+        query: dict = {"mission_id": mission_id}
+    else:
+        query = {"mission_id": {"$in": user_mission_ids}}
+
     if has_detections is not None:
         query["has_detections"] = has_detections
 

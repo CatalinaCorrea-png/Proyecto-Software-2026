@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { authFetch, authHeaders } from '../utils/authFetch'
 
 export interface Mission {
   id: number
@@ -39,13 +40,10 @@ export function useMissions() {
   const [missions, setMissions] = useState<Mission[]>([])
   const [loading, setLoading] = useState(true)
 
-  // showSpinner=true solo en la carga inicial para mostrar el spinner.
-  // Los refrescos automáticos y manuales lo omiten para no desmontar
-  // las cards cada vez que se actualiza la lista en background.
   const fetchMissions = async (showSpinner = false) => {
     if (showSpinner) setLoading(true)
     try {
-      const res = await fetch('http://localhost:8000/missions')
+      const res = await authFetch('/missions')
       setMissions(await res.json())
     } catch (e) {
       console.error('Error fetching missions:', e)
@@ -56,7 +54,7 @@ export function useMissions() {
 
   const fetchDetail = async (id: number): Promise<MissionDetail | null> => {
     try {
-      const res = await fetch(`http://localhost:8000/missions/${id}`)
+      const res = await authFetch(`/missions/${id}`)
       return await res.json()
     } catch {
       return null
@@ -65,7 +63,10 @@ export function useMissions() {
 
   const deleteMission = async (id: number): Promise<boolean> => {
     try {
-      const res = await fetch(`http://localhost:8000/missions/${id}`, { method: 'DELETE' })
+      const res = await fetch(`http://localhost:8000/missions/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      })
       if (res.ok) {
         setMissions(prev => prev.filter(m => m.id !== id))
         return true
@@ -80,7 +81,6 @@ export function useMissions() {
     fetchMissions(true)
   }, [])
 
-  // Refresco automático mientras haya alguna misión activa
   useEffect(() => {
     const hasActive = missions.some(m => m.status === 'active')
     if (!hasActive) return

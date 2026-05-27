@@ -1,8 +1,7 @@
 import { useState, useCallback } from 'react'
 import axios from 'axios'
 import type { ImageMeta, ImageListResponse } from '../types'
-
-const API = 'http://localhost:8000'
+import { API, getToken } from '../utils/authFetch'
 
 interface GalleryFilters {
   mission_id?: string
@@ -28,7 +27,9 @@ export function useImageGallery() {
       params.set('page', String(filters.page ?? 1))
       params.set('page_size', String(filters.page_size ?? 20))
 
-      const { data } = await axios.get<ImageListResponse>(`${API}/api/images?${params}`)
+      const { data } = await axios.get<ImageListResponse>(`${API}/api/images?${params}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
       setImages(data.items)
       setTotal(data.total)
     } catch {
