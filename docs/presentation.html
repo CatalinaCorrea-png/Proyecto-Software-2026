@@ -307,7 +307,92 @@
 </section>
 
 
-<!-- ──────────────  SLIDE 7 · ARQUITECTURA  ────────────── -->
+<!-- ──────────────  SLIDE 7 · ESTADÍSTICAS  ────────────── -->
+<section data-background-color="#0A0E1A">
+  <h2>5 · Análisis post-misión</h2>
+  <p>
+    Dashboard con filtrado por misión. Métricas pensadas para SAR:
+    <em>planificación operativa</em> + <em>calidad del modelo</em>.
+  </p>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+
+    <!-- Columna 1: Operacionales -->
+    <div>
+      <div class="title" style="color: var(--accent); font-size: 0.5em; letter-spacing: 1px; margin-bottom: 6px;">
+        ▸ OPERACIONALES · planificación
+      </div>
+
+      <div class="card" style="padding: 8px 12px; margin: 4px 0;">
+        <div class="title">TTFD · min</div>
+        <p style="margin: 0; font-size: 0.55em;">
+          Tiempo hasta la primera detección.
+        </p>
+      </div>
+
+      <div class="card" style="padding: 8px 12px; margin: 4px 0;">
+        <div class="title">EFICIENCIA DE BARRIDO · m²/min</div>
+        <p style="margin: 0; font-size: 0.55em;">
+          Cuánto terreno cubre por minuto · compara configs (altitud, celda).
+        </p>
+      </div>
+
+      <div class="card" style="padding: 8px 12px; margin: 4px 0;">
+        <div class="title">DENSIDAD · det/km²</div>
+        <p style="margin: 0; font-size: 0.55em;">
+          Productividad de la zona · normaliza detecciones por área.
+        </p>
+      </div>
+
+      <div class="card" style="padding: 8px 12px; margin: 4px 0;">
+        <div class="title">BATERÍA · %/km²</div>
+        <p style="margin: 0; font-size: 0.55em;">
+          Consumo por km² cubierto · predictor para próximas misiones.
+        </p>
+      </div>
+    </div>
+
+    <!-- Columna 2: Técnicas -->
+    <div>
+      <div class="title" style="color: var(--accent-2); font-size: 0.5em; letter-spacing: 1px; margin-bottom: 6px;">
+        ▸ CALIDAD DEL MODELO
+      </div>
+
+      <div class="card" style="padding: 8px 12px; margin: 4px 0; border-color: var(--accent-2);">
+        <div class="title" style="color: var(--accent-2);">FUENTE POR MISIÓN · 100% stacked</div>
+        <p style="margin: 0; font-size: 0.55em;">
+          <span class="pill cyan">rgb</span>
+          <span class="pill" style="border-color: #FF7043; color: #FF7043; background: rgba(255,112,67,0.15);">thermal</span>
+          <span class="pill" style="border-color: #AB47BC; color: #AB47BC; background: rgba(171,71,188,0.15);">fusion</span>
+          <br/>
+          Cuánto aporta cada canal · valida la fusión.
+        </p>
+      </div>
+
+      <div class="card" style="padding: 8px 12px; margin: 4px 0; border-color: var(--accent-2);">
+        <div class="title" style="color: var(--accent-2);">ALTITUD vs CONFIANZA · scatter</div>
+        <p style="margin: 0; font-size: 0.55em;">
+          A qué altitud detecta mejor el modelo · feedback para tuning.
+        </p>
+      </div>
+
+      <div class="card" style="padding: 8px 12px; margin: 8px 0 0; border-color: var(--warn);">
+        <div class="title" style="color: var(--warn);">FILTRADO POR MISIÓN</div>
+        <p style="margin: 0; font-size: 0.55em;">
+          Sidebar con checkboxes · comparar subsets, aislar anomalías.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="footnote">
+    → Stack: <em>FastAPI + pandas</em> sobre SQLite · <em>Recharts</em> en React.
+  </p>
+</section>
+
+
+<!-- ──────────────  SLIDE 8 · ARQUITECTURA  ────────────── -->
 <section data-background-color="#0A0E1A">
   <h2>Arquitectura</h2>
 
@@ -362,7 +447,7 @@
 </section>
 
 
-<!-- ──────────────  SLIDE 8 · CIERRE  ────────────── -->
+<!-- ──────────────  SLIDE 9 · CIERRE  ────────────── -->
 <section class="cover" data-background-color="#0A0E1A">
   <div style="margin-top: 40px;">
     <span class="tag accent">GRACIAS</span>
@@ -402,6 +487,11 @@
     progress: true,
     transition: 'slide',
     backgroundTransition: 'fade',
+    // Viewport más ancho/alto que el default (960x700) para que los slides
+    // densos entren completos sin que el navegador tenga que estar al 50%.
+    width: 1280,
+    height: 820,
+    margin: 0.02,
     plugins: [ RevealHighlight, RevealNotes ],
   });
 </script>
