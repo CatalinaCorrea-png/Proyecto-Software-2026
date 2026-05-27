@@ -13,6 +13,9 @@ SECRET_KEY = "aerosearch-secret-key-2026"
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 
+ADMIN_EMAIL = "admin@aerosearch.ai"
+ADMIN_PASSWORD = "aerosearch2026"
+
 _security = HTTPBearer()
 
 
@@ -42,9 +45,24 @@ def _verify(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
 
-class RegisterRequest(BaseModel):
-    email: str
-    password: str
+def _create_token(data: dict) -> str:
+    payload = data.copy()
+    payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRE_HOURS)
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def _get_or_create_admin(db) -> User:
+    user = db.query(User).filter(User.email == ADMIN_EMAIL).first()
+    if not user:
+        user = User(
+            email=ADMIN_EMAIL,
+            hashed_password=_hash(ADMIN_PASSWORD),
+            role="admin",
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
 
 
 class LoginRequest(BaseModel):
@@ -52,44 +70,13 @@ class LoginRequest(BaseModel):
     password: str
 
 
-def _create_token(data: dict) -> str:
-    payload = data.copy()
-    payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRE_HOURS)
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
-
-@router.post("/register")
-def register(req: RegisterRequest):
-    if not req.email or "@" not in req.email:
-        raise HTTPException(status_code=422, detail="Email inválido")
-    if len(req.password) < 6:
-        raise HTTPException(status_code=422, detail="La contraseña debe tener al menos 6 caracteres")
-
-    db = SessionLocal()
-    try:
-        if db.query(User).filter(User.email == req.email.lower()).first():
-            raise HTTPException(status_code=400, detail="El email ya está registrado")
-        user = User(
-            email=req.email.lower(),
-            hashed_password=_hash(req.password),
-            role="admin",
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        token = _create_token({"sub": user.email, "role": user.role})
-        return {"access_token": token, "token_type": "bearer", "email": user.email, "role": user.role}
-    finally:
-        db.close()
-
-
 @router.post("/login")
 def login(req: LoginRequest):
+    if req.email.lower() != ADMIN_EMAIL or req.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.email == req.email.lower()).first()
-        if not user or not _verify(req.password, user.hashed_password):
-            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+        user = _get_or_create_admin(db)
         token = _create_token({"sub": user.email, "role": user.role})
         return {"access_token": token, "token_type": "bearer", "email": user.email, "role": user.role}
     finally:
