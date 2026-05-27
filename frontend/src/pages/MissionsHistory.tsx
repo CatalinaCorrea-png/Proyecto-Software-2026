@@ -82,11 +82,14 @@ function StatBox({ label, value, accent }: { label: string; value: string; accen
       display: 'flex',
       flexDirection: 'column',
       gap: 2,
+      minWidth: 0,
     }}>
-      <span style={{ fontSize: 10, color: '#546E7A', textTransform: 'uppercase', letterSpacing: 1 }}>
+      <span style={{ fontSize: 10, color: '#546E7A', textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {label}
       </span>
-      <span style={{ fontSize: 15, fontWeight: 'bold', color: accent ?? '#E0E0E0', fontFamily: 'monospace' }}>
+      <span style={{ fontSize: 15, fontWeight: 'bold', color: accent ?? '#E0E0E0', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+        title={value}
+      >
         {value}
       </span>
     </div>
@@ -450,7 +453,7 @@ function MissionDetailPanel({ missionId, onClose, fetchDetail, onViewGallery }: 
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 8
 
 export function MissionsHistory({ onViewGallery }: { onViewGallery?: (missionId: string) => void }) {
   const { missions, loading, refetch, fetchDetail, deleteMission } = useMissions()
@@ -570,7 +573,7 @@ export function MissionsHistory({ onViewGallery }: { onViewGallery?: (missionId:
         <>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
+            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
             gap: 16,
           }}>
             {paginated.map(m => (
