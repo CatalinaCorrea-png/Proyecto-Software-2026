@@ -21,30 +21,15 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 export function AuthPage({ onLogin }: Props) {
-  const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
-
-  const switchMode = (m: 'login' | 'register') => {
-    setMode(m)
-    setError('')
-    setPassword('')
-    setConfirmPassword('')
-    setShowPassword(false)
-    setShowConfirm(false)
-  }
 
   const handleLogin = async () => {
     setError('')
     if (!email || !password) { setError('Completá todos los campos'); return }
-    if (!validateEmail(email)) { setError('El email no es válido'); return }
     setLoading(true)
     try {
       const res = await fetch(`${API}/auth/login`, {
@@ -63,35 +48,8 @@ export function AuthPage({ onLogin }: Props) {
     }
   }
 
-  const handleRegister = async () => {
-    setError('')
-    if (!email || !password || !confirmPassword) { setError('Completá todos los campos'); return }
-    if (!validateEmail(email)) { setError('El email no es válido'); return }
-    if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return }
-    if (password !== confirmPassword) { setError('Las contraseñas no coinciden'); return }
-    setLoading(true)
-    try {
-      const res = await fetch(`${API}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || `Error ${res.status}`)
-      onLogin(data.access_token, data.email)
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      setError(msg || 'Error de conexión')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (mode === 'login') handleLogin()
-      else handleRegister()
-    }
+    if (e.key === 'Enter') handleLogin()
   }
 
   const inputStyle: React.CSSProperties = {
@@ -159,32 +117,6 @@ export function AuthPage({ onLogin }: Props) {
           </div>
         </div>
 
-        {/* Mode tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #1E3A5F', marginBottom: 4 }}>
-          {(['login', 'register'] as const).map(m => (
-            <button
-              key={m}
-              onClick={() => switchMode(m)}
-              style={{
-                flex: 1,
-                background: 'transparent',
-                border: 'none',
-                borderBottom: `2px solid ${mode === m ? '#FF6D00' : 'transparent'}`,
-                color: mode === m ? '#FF6D00' : '#546E7A',
-                fontFamily: 'monospace',
-                fontSize: 10,
-                letterSpacing: 1,
-                padding: '8px 0',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                marginBottom: -1,
-              }}
-            >
-              {m === 'login' ? 'INICIAR SESIÓN' : 'REGISTRARSE'}
-            </button>
-          ))}
-        </div>
-
         {/* Email */}
         <div>
           <div style={labelStyle}>EMAIL</div>
@@ -206,38 +138,17 @@ export function AuthPage({ onLogin }: Props) {
             <input
               type={showPassword ? 'text' : 'password'}
               style={{ ...inputStyle, paddingRight: 36 }}
-              placeholder={mode === 'register' ? 'Mínimo 6 caracteres' : '••••••••'}
+              placeholder="••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              onKeyDown={mode === 'login' ? handleKeyDown : undefined}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              onKeyDown={handleKeyDown}
+              autoComplete="current-password"
             />
             <button type="button" style={eyeBtnStyle} onClick={() => setShowPassword(v => !v)}>
               <EyeIcon open={showPassword} />
             </button>
           </div>
         </div>
-
-        {/* Confirm password — register only */}
-        {mode === 'register' && (
-          <div>
-            <div style={labelStyle}>CONFIRMAR CONTRASEÑA</div>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showConfirm ? 'text' : 'password'}
-                style={{ ...inputStyle, paddingRight: 36 }}
-                placeholder="Repetí tu contraseña"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                onKeyDown={handleKeyDown}
-                autoComplete="new-password"
-              />
-              <button type="button" style={eyeBtnStyle} onClick={() => setShowConfirm(v => !v)}>
-                <EyeIcon open={showConfirm} />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Error */}
         {error && (
@@ -248,7 +159,7 @@ export function AuthPage({ onLogin }: Props) {
 
         {/* Submit */}
         <button
-          onClick={mode === 'login' ? handleLogin : handleRegister}
+          onClick={handleLogin}
           disabled={loading}
           style={{
             background: loading ? '#37474F' : '#FF6D00',
@@ -265,7 +176,7 @@ export function AuthPage({ onLogin }: Props) {
             width: '100%',
           }}
         >
-          {loading ? 'PROCESANDO...' : mode === 'login' ? 'INGRESAR' : 'CREAR CUENTA'}
+          {loading ? 'PROCESANDO...' : 'INGRESAR'}
         </button>
       </div>
     </div>
