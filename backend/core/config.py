@@ -5,13 +5,13 @@ load_dotenv()
 
 CAMERA_SOURCE = os.getenv("CAMERA_SOURCE", "webcam")
 
-# IP del ESP32-CAM en la red local (configurar con env var DRONE_IP)
-DRONE_IP = os.getenv("DRONE_IP", "192.168.4.1")
-ESP32_STREAM_URL = os.getenv("ESP32_STREAM_URL", f"http://{DRONE_IP}/stream")
+# IP del ESP32-CAM — debe definirse en .env al usar CAMERA_SOURCE=esp32
+DRONE_IP = os.getenv("DRONE_IP")
+ESP32_STREAM_URL = os.getenv("ESP32_STREAM_URL") or (f"http://{DRONE_IP}/stream" if DRONE_IP else None)
 
 # Puertos UDP para control y telemetría (deben coincidir con pch.h)
-DRONE_UDP_PORT = int(os.getenv("DRONE_UDP_PORT", "4210"))   # ESP32 escucha comandos aquí
-DRONE_UDP_TX_PORT = int(os.getenv("DRONE_UDP_TX_PORT", "4211"))  # ESP32 envía telemetría aquí
+DRONE_UDP_PORT = int(os.getenv("DRONE_UDP_PORT", "4210"))
+DRONE_UDP_TX_PORT = int(os.getenv("DRONE_UDP_TX_PORT", "4211"))
 
 VIDEO_SOURCE = os.getenv("VIDEO_SOURCE", "media/videos/video6.mp4")
 
