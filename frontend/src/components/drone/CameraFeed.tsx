@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDetectionFeed } from '../../hooks/useDetectionFeed'
 import type { Detection } from '../../types'
+import { WS_URL } from '../../config'
 
 interface Props {
   onNewDetection?: (detection: Detection) => void
@@ -9,7 +10,7 @@ interface Props {
 type ViewMode = 'rgb' | 'overlay'
 
 export function CameraFeed({ onNewDetection }: Props) {
-  const { framePayload, detections, isConnected } = useDetectionFeed('ws://localhost:8000/ws/detection')
+  const { framePayload, detections, isConnected } = useDetectionFeed(`${WS_URL}/ws/detection`)
   const [viewMode, setViewMode] = useState<ViewMode>('rgb')
   const forwardedRef = useRef<Set<string>>(new Set())
 

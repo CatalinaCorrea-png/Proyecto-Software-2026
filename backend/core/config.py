@@ -23,6 +23,9 @@ CAMERA_INDEX = {
     "synthetic": (None, False)
 }
 
+# Base de datos SQL
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./aerosearch.db")
+
 # MongoDB
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 MONGODB_DB  = os.getenv("MONGODB_DB",  "aerosearch")

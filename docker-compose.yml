@@ -28,8 +28,9 @@ services:
       - ./backend/.env
     environment:
       - ENV=production
-      - MONGODB_URL=mongodb://mongodb:27017
-      - MONGODB_DB=aerosearch
+      - MONGODB_URL=mongodb://mongodb:27017   # nombre del servicio en la red Docker
+      - MONGODB_DB=${MONGODB_DB:-aerosearch}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./aerosearch.db}
 
   frontend:
     build: ./frontend

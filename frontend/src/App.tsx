@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { API_URL, WS_URL } from './config'
 import { MissionSetup } from './pages/MissionSetup'
 import { Dashboard } from './pages/Dashboard'
 import { MissionsHistory } from './pages/MissionsHistory'
@@ -70,7 +71,7 @@ function App() {
 
   useEffect(() => {
     if (!hasMission) return
-    fetch('http://localhost:8000/mission/active')
+    fetch(`${API_URL}/mission/active`)
       .then(r => r.json())
       .then(data => {
         if (!data.active) {
@@ -86,7 +87,7 @@ function App() {
       })
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  const wsUrl = missionStarted ? 'ws://localhost:8000/ws/mission' : null
+  const wsUrl = missionStarted ? `${WS_URL}/ws/mission` : null
   const { lastMessage, isConnected } = useWebSocket(wsUrl)
   const { telemetry, trail } = useMission(lastMessage)
   const [mapDetections, setMapDetections] = useState<Detection[]>([])
@@ -109,7 +110,7 @@ function App() {
   const handleNewMission = useCallback(async () => {
     if (missionStarted) {
       try {
-        await fetch('http://localhost:8000/mission/stop', { method: 'POST' })
+        await fetch(`${API_URL}/mission/stop`, { method: 'POST' })
       } catch { /* backend down */ }
     }
     setMissionStarted(false)
@@ -122,7 +123,7 @@ function App() {
 
   const handleStopMission = useCallback(async () => {
     try {
-      await fetch('http://localhost:8000/mission/stop', { method: 'POST' })
+      await fetch(`${API_URL}/mission/stop`, { method: 'POST' })
     } catch { /* backend down */ }
     setMissionStarted(false)
     sessionStorage.removeItem('missionActive')

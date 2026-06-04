@@ -1,8 +1,8 @@
 <div align="center">
 
-# Proyecto Software 2026
+# AeroSearch AI
 
-**Aplicación web full-stack con visión artificial, análisis de datos en tiempo real y visualización interactiva.**
+**Sistema de gestión de drones para búsqueda y rescate con visión por computadora, detección térmica y dashboard de estadísticas en tiempo real.**
 
 <br/>
 
@@ -23,8 +23,10 @@
 - [Tecnologías](#tecnologías)
 - [Requisitos previos](#-requisitos-previos)
 - [Instalación](#-instalación)
+- [Variables de entorno](#-variables-de-entorno)
 - [Levantar la aplicación](#-levantar-la-aplicación)
 - [Levantar con Docker](#-levantar-con-docker)
+- [Tests](#-tests)
 - [Estructura del proyecto](#-estructura-del-proyecto)
 - [Equipo](#-equipo)
 
@@ -51,8 +53,6 @@
 
 ## 📦 Requisitos previos
 
-Antes de comenzar, descargá e instalá las siguientes herramientas:
-
 | Herramienta | Versión mínima | Descarga |
 |---|---|---|
 | **Python** | 3.10+ | [python.org/downloads](https://www.python.org/downloads/) |
@@ -61,12 +61,9 @@ Antes de comenzar, descargá e instalá las siguientes herramientas:
 | **Git** | cualquiera | [git-scm.com](https://git-scm.com/) |
 | **Docker** | 20+ *(opcional)* | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
 
-> **Verificá las instalaciones** ejecutando en tu terminal:
+> **Verificá las instalaciones:**
 > ```bash
-> python --version
-> node --version
-> pnpm --version
-> git --version
+> python --version && node --version && pnpm --version
 > ```
 
 ---
@@ -80,48 +77,86 @@ git clone https://github.com/CatalinaCorrea-png/Proyecto-Software-2026.git
 cd Proyecto-Software-2026
 ```
 
-### 2. Configurar el Backend
+### 2. Crear los archivos de variables de entorno
 
 ```bash
-# Moverse a la carpeta del backend
+# Linux / macOS
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+```powershell
+# Windows
+copy backend\.env.example backend\.env
+copy frontend\.env.example frontend\.env
+```
+
+> Los valores por defecto funcionan para desarrollo local sin ningún cambio.
+> Solo editá `backend/.env` si querés conectar el hardware real (ESP32-CAM).
+
+### 3. Configurar el Backend
+
+```bash
 cd backend
 
-# Crear el entorno virtual
+# Crear y activar el entorno virtual
 python -m venv venv
-```
+.\venv\Scripts\Activate.ps1   # Windows PowerShell
+# source venv/bin/activate     # Linux / macOS
 
-**Activar el entorno virtual:**
-
-```bash
-# Windows (PowerShell)
-.\venv\Scripts\Activate.ps1
-
-# Windows (CMD)
-venv\Scripts\activate.bat
-```
-
-> Cuando el entorno está activo, vas a ver `(venv)` al inicio de la línea en tu terminal.
-
-```bash
-# Instalar dependencias de Python
+# Instalar dependencias
 pip install -r requirements.txt
 ```
 
-### 3. Configurar el Frontend
+### 4. Configurar el Frontend
 
 ```bash
-# Desde la raíz del proyecto, moverse a la carpeta del frontend
 cd frontend
-
-# Instalar dependencias de Node.js
 pnpm install
 ```
 
 ---
 
+## ⚙️ Variables de entorno
+
+Ninguna variable es obligatoria para correr en modo local — todas tienen valores por defecto razonables. Copiá los ejemplos solo si necesitás cambiar algo:
+
+```bash
+# Backend
+cp backend/.env.example backend/.env
+
+# Frontend
+cp frontend/.env.example frontend/.env
+```
+
+### Backend (`backend/.env`)
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///./aerosearch.db` | Ruta de la base de datos SQLite |
+| `MONGODB_URL` | `mongodb://localhost:27017` | URL de conexión a MongoDB |
+| `MONGODB_DB` | `aerosearch` | Nombre de la base de datos |
+| `CAMERA_SOURCE` | `synthetic` | Fuente de video: `synthetic`, `webcam`, `esp32`, `video` |
+| `DRONE_IP` | — | IP del ESP32-CAM (solo si `CAMERA_SOURCE=esp32`) |
+| `ESP32_STREAM_URL` | — | URL del stream (se deriva de `DRONE_IP` si no se define) |
+| `DRONE_UDP_PORT` | `4210` | Puerto UDP de recepción |
+| `DRONE_UDP_TX_PORT` | `4211` | Puerto UDP de telemetría |
+| `VIDEO_SOURCE` | `media/videos/video6.mp4` | Archivo de video local (solo si `CAMERA_SOURCE=video`) |
+
+### Frontend (`frontend/.env`)
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `VITE_API_URL` | `http://localhost:8000` | URL base del backend (HTTP) |
+| `VITE_WS_URL` | `ws://localhost:8000` | URL base del backend (WebSocket) |
+
+> En Docker las URLs del frontend no necesitan cambiarse — el browser siempre accede al backend en `localhost:8000`.
+
+---
+
 ## ▶️ Levantar la aplicación
 
-Necesitás **dos terminales abiertas** al mismo tiempo — una para el backend y otra para el frontend.
+Necesitás **dos terminales** simultáneas.
 
 ### Terminal 1 — Backend
 
@@ -131,8 +166,8 @@ cd backend
 uvicorn main:app --reload
 ```
 
-El backend queda disponible en → **http://localhost:8000**  
-Documentación de la API (Swagger) → **http://localhost:8000/docs**
+Backend disponible en → **http://localhost:8000**  
+Documentación interactiva → **http://localhost:8000/docs**
 
 ### Terminal 2 — Frontend
 
@@ -141,41 +176,19 @@ cd frontend
 pnpm run dev
 ```
 
-El frontend queda disponible en → **http://localhost:5173**
+Frontend disponible en → **http://localhost:5173**
 
 ---
 
 ## 🐳 Levantar con Docker
 
-### Variables de entorno
-
-El archivo `backend/.env` está ignorado por Git — los valores de tu entorno no se suben al repositorio. Para saber qué configurar, usá `backend/.env.example` como referencia:
-
 ```bash
-cp backend/.env.example backend/.env   # Linux / macOS
-copy backend\.env.example backend\.env # Windows
-```
+# Levanta MongoDB, backend y frontend
+docker compose up
 
-Las variables de hardware (IP del drone, URL del stream) **no tienen default en el código** — si usás el ESP32-CAM tenés que definirlas en `.env`. El resto tiene valores por defecto razonables y no hace falta tocarlos salvo que necesites cambiarlos.
-
-| Variable | Default | Requerido |
-|---|---|---|
-| `CAMERA_SOURCE` | `webcam` | No |
-| `DRONE_IP` | — | Solo si `CAMERA_SOURCE=esp32` |
-| `ESP32_STREAM_URL` | — | Solo si `CAMERA_SOURCE=esp32` |
-| `DRONE_UDP_PORT` | `4210` | No |
-| `DRONE_UDP_TX_PORT` | `4211` | No |
-| `MONGODB_URL` | `mongodb://localhost:27017` | No (Docker lo sobreescribe automáticamente) |
-| `MONGODB_DB` | `aerosearch` | No |
-
-### Comando
-
-```bash
-# Desde la raíz del proyecto — levanta MongoDB
+# Solo MongoDB (para desarrollo local del backend)
 docker compose up mongodb -d
 ```
-
-Una vez que termine, los servicios quedan disponibles en:
 
 | Servicio | URL |
 |---|---|
@@ -184,20 +197,42 @@ Una vez que termine, los servicios quedan disponibles en:
 | Swagger (docs) | **http://localhost:8000/docs** |
 | MongoDB | `localhost:27017` |
 
-> La primera vez tarda más porque descarga las imágenes base y construye los contenedores.
+```bash
+docker compose logs -f      # Ver logs en tiempo real
+docker compose down         # Detener contenedores
+docker compose down -v      # Detener y borrar datos de MongoDB
+```
 
-### Otros comandos útiles
+---
+
+## 🧪 Tests
+
+El proyecto cuenta con **54 tests de backend** y **34 tests de frontend**.
+
+### Backend
 
 ```bash
-# Ver los logs en tiempo real
-docker compose logs -f
-
-# Detener todos los contenedores
-docker compose down
-
-# Detener y eliminar los volúmenes (borra los datos de MongoDB)
-docker compose down -v
+cd backend
+.\venv\Scripts\Activate.ps1
+python -m pytest tests/ -v
 ```
+
+Con reporte de cobertura (genera `coverage/index.html`):
+
+```bash
+python -m pytest tests/
+```
+
+### Frontend
+
+```bash
+cd frontend
+pnpm test:run          # Corre los tests una vez
+pnpm test              # Modo watch (re-corre al guardar)
+pnpm test:coverage     # Genera reporte en coverage/index.html
+```
+
+Los tests de CI corren automáticamente en cada PR que toque `backend/` o `frontend/` y publican el reporte de cobertura como comentario.
 
 ---
 
@@ -205,16 +240,34 @@ docker compose down -v
 
 ```
 Proyecto-Software-2026/
-├── backend/                # API REST en Python (FastAPI)
-│   ├── main.py             # Punto de entrada del servidor
-│   ├── requirements.txt    # Dependencias de Python
-│   └── ...
-├── frontend/               # Interfaz web en TypeScript + React
+├── backend/                        # API REST (FastAPI + Python)
+│   ├── main.py                     # Punto de entrada
+│   ├── requirements.txt            # Dependencias Python
+│   ├── .env.example                # Variables de entorno de ejemplo
+│   ├── core/                       # Config y estado global
+│   ├── db/                         # Modelos SQLAlchemy y MongoDB
+│   ├── modules/
+│   │   ├── detection/              # YOLOv8 + detección térmica + fusión
+│   │   ├── drone/                  # Telemetría y simulación
+│   │   ├── mapping/                # Generación de grilla de búsqueda
+│   │   └── storage/                # Persistencia de imágenes
+│   ├── routers/                    # Endpoints REST y WebSockets
+│   └── tests/                      # Tests unitarios e integración
+├── frontend/                       # Dashboard web (React 19 + TypeScript)
 │   ├── src/
-│   ├── package.json
-│   └── ...
-└── README.md
+│   │   ├── config.ts               # URLs del backend (desde .env)
+│   │   ├── pages/                  # Dashboard, Historial, Galería, Estadísticas
+│   │   ├── components/             # Mapa, cámara, telemetría, alertas
+│   │   ├── hooks/                  # WebSocket, misiones, detecciones
+│   │   └── types/                  # Tipos TypeScript compartidos
+│   ├── .env.example                # Variables de entorno de ejemplo
+│   └── package.json
+├── hardware/                       # Firmware ESP32-CAM (C++ / PlatformIO)
+├── .github/workflows/              # CI: tests + cobertura en cada PR
+└── docker-compose.yml
 ```
+
+---
 
 ## 👥 Equipo
 
@@ -226,4 +279,3 @@ Proyecto-Software-2026/
 | Maximiliano Andres Bianchimano |
 | Fernanda Perez |
 | Martin Schubert |
-

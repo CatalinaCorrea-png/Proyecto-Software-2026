@@ -1,4 +1,5 @@
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet'
+import { WS_URL } from '../../config'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { CoverageGrid } from './CoverageGrid'
@@ -75,7 +76,7 @@ function closestImage(det: Detection, imgs: ImageMeta[]): ImageMeta | undefined 
 
 export function SearchMap({ telemetry, detections, trail, savedImages = [], onImageClick }: SearchMapProps) {
   const center = telemetry?.position ?? DEFAULT_CENTER
-  const { cells, coverage } = useSearchGrid('ws://localhost:8000/ws/grid')
+  const { cells, coverage } = useSearchGrid(`${WS_URL}/ws/grid`)
 
   return (
     <div style={{ position: 'relative', height: '100%' }}>

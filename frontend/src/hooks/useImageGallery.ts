@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import axios from 'axios'
 import type { ImageMeta, ImageListResponse } from '../types'
 
-const API = 'http://localhost:8000'
+import { API_URL as API } from '../config'
 
 interface GalleryFilters {
   mission_id?: string
