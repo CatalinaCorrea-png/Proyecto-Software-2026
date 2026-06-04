@@ -125,3 +125,24 @@ async def get_full_image(image_id: str) -> Optional[bytes]:
         return None
     stream = await _mongo.gridfs.open_download_stream(doc["gridfs_id"])
     return await stream.read()
+
+
+async def delete_images_by_mission(mission_id: str) -> int:
+    """Borra todas las imágenes, detecciones y archivos GridFS de una misión en MongoDB."""
+    if _mongo.db is None or _mongo.gridfs is None:
+        return 0
+
+    cursor = _mongo.db.images.find({"mission_id": mission_id}, {"gridfs_id": 1})
+    images = await cursor.to_list(length=None)
+
+    for img in images:
+        try:
+            await _mongo.gridfs.delete(img["gridfs_id"])
+        except Exception:
+            pass
+
+    await _mongo.db.images.delete_many({"mission_id": mission_id})
+    await _mongo.db.detections.delete_many({"mission_id": mission_id})
+    await _mongo.db.missions.delete_one({"mission_id": mission_id})
+
+    return len(images)

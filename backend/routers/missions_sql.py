@@ -9,6 +9,7 @@ from core.state import drone_state, reset_mission
 from db.database import SessionLocal
 from db.mission_ops import close_mission_db
 from db.models import Mission as MissionModel
+from modules.storage.image_service import delete_images_by_mission
 
 router = APIRouter(tags=["missions-sql"])
 
@@ -109,7 +110,7 @@ def list_missions():
 
 
 @router.delete("/missions/{mission_id}", status_code=204)
-def delete_mission(mission_id: int):
+async def delete_mission(mission_id: int):
     db = SessionLocal()
     try:
         m = db.query(MissionModel).filter(MissionModel.id == mission_id).first()
@@ -121,6 +122,7 @@ def delete_mission(mission_id: int):
         db.commit()
     finally:
         db.close()
+    await delete_images_by_mission(str(mission_id))
 
 
 @router.get("/missions/{mission_id}")
