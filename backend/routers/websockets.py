@@ -120,8 +120,10 @@ async def detection_websocket(websocket: WebSocket):
                     continue
                 last_frame = frame
             else:
-                frame = last_frame if last_frame is not None else \
-                    np.random.randint(80, 120, (frame_h, frame_w, 3), dtype=np.uint8)
+                if last_frame is None:
+                    await asyncio.sleep(0.05)
+                    continue
+                frame = last_frame
 
             rgb_detections, (t_matrix, t_dets) = await asyncio.gather(
                 asyncio.to_thread(yolo.detect, frame),

@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from core.config import DRONE_UDP_TX_PORT
+from core.config import DRONE_UDP_TX_PORT, APIDRONE_API_URL
 from db.database import init_db
 from db.mission_ops import close_orphan_missions
 from db.mongodb import connect as mongo_connect, disconnect as mongo_disconnect
@@ -12,6 +12,7 @@ from modules.drone.frame_grabber import stop_grabber
 from modules.drone.udp_telemetry import hw_watchdog, start_udp_listener
 from routers import images, missions_mongo, stats
 from routers import drone, missions_sql, websockets
+import services.apidrone_client as apidrone_svc
 
 init_db()
 close_orphan_missions()
@@ -20,6 +21,11 @@ close_orphan_missions()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await mongo_connect()
+
+    if APIDRONE_API_URL:
+        client = apidrone_svc.init_client()
+        await client.start()
+
     # Se guarda el transport para cerrarlo en el shutdown.
     # Sin esto, el socket UDP quedaba ocupado al reiniciar y el puerto
     # lanzaba WinError 10048 en el siguiente arranque.
@@ -29,6 +35,12 @@ async def lifespan(app: FastAPI):
     yield
     udp_transport.close()  # libera el puerto UDP al cerrar
     stop_grabber()
+
+    if APIDRONE_API_URL:
+        client = apidrone_svc.get_client()
+        if client:
+            await client.stop()
+
     try:
         await mongo_disconnect()
     except Exception:

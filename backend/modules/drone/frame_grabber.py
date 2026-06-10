@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import requests
 
-from core.config import CAMERA_INDEX, CAMERA_SOURCE
+from core.config import CAMERA_FLIP, CAMERA_INDEX, CAMERA_SOURCE
 
 
 class FrameGrabber:
@@ -165,7 +165,12 @@ class FrameGrabber:
 
     def grab(self) -> np.ndarray | None:
         with self._lock:
-            return self._frame.copy() if self._frame is not None else None
+            if self._frame is None:
+                return None
+            frame = self._frame.copy()
+        if CAMERA_FLIP:
+            frame = cv2.flip(frame, -1)
+        return frame
 
     def stop(self):
         self._running = False

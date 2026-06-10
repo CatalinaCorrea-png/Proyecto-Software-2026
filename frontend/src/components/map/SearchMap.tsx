@@ -3,6 +3,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { CoverageGrid } from './CoverageGrid'
 import { useSearchGrid } from '../../hooks/useSearchGrid'
+import { WS } from '../../config'
 import type { DroneTelemetry, Detection, ImageMeta } from '../../types'
 import { useEffect, useRef } from 'react'
 
@@ -75,7 +76,7 @@ function closestImage(det: Detection, imgs: ImageMeta[]): ImageMeta | undefined 
 
 export function SearchMap({ telemetry, detections, trail, savedImages = [], onImageClick }: SearchMapProps) {
   const center = telemetry?.position ?? DEFAULT_CENTER
-  const { cells, coverage } = useSearchGrid('ws://localhost:8000/ws/grid')
+  const { cells, coverage } = useSearchGrid(`${WS}/ws/grid`)
 
   return (
     <div style={{ position: 'relative', height: '100%' }}>
