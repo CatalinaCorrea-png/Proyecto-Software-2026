@@ -209,6 +209,7 @@ export function SearchMap({ telemetry, detections, trail, savedImages = [], onIm
               key={`marker-${det.id}`}
               position={[det.position.lat, det.position.lng]}
               icon={detectionIcon(detStatus(det))}
+              zIndexOffset={1000}
             >
               <Popup>
                 <div style={{
