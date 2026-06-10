@@ -27,4 +27,9 @@ def _migrate():
         ]:
             if col not in cols:
                 conn.execute(text(f"ALTER TABLE missions ADD COLUMN {col} {definition}"))
+
+        det_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(detections)")).fetchall()]
+        if "status" not in det_cols:
+            conn.execute(text("ALTER TABLE detections ADD COLUMN status TEXT DEFAULT 'pending'"))
+
         conn.commit()

@@ -21,6 +21,18 @@ class DroneState:
     sim_step: int = 0
     sim_direction: int = 1
     mission_active: bool = False
+    # Movimiento autónomo (máquina de estados):
+    #   "idle" | "sweeping" | "awaiting_confirmation"
+    #   | "revisiting" | "revisit_confirm" | "completed"
+    sweep_state: str = "idle"
+    sweep_paused: bool = False
+    pending_detection: dict | None = None   # detección esperando al operador
+    pending_since: float = 0.0              # timestamp para el auto-resume
+    revisit_queue: list = field(default_factory=list)  # detecciones MEDIUM por revisar
+    revisit_target: dict | None = None     # punto de la cola al que se vuela ahora
+    home_lat: float = BASE_LAT             # punto de despegue (return-to-launch)
+    home_lng: float = BASE_LNG
+    resume_state: str = "sweeping"         # fase a retomar tras resolver un hallazgo (Opción B)
 
 drone_state = DroneState()
 
@@ -50,6 +62,13 @@ def reset_mission(lat: float, lng: float, altitude: float,
     drone_state.cmd_throttle = 0
     drone_state.cmd_pitch = 0
     drone_state.cmd_roll = 0
+    drone_state.sweep_state = "idle"
+    drone_state.sweep_paused = False
+    drone_state.pending_detection = None
+    drone_state.pending_since = 0.0
+    drone_state.revisit_queue = []
+    drone_state.revisit_target = None
+    drone_state.resume_state = "sweeping"
     drone_state.mission_start = time.time()
 
     search_grid = SearchGrid(
@@ -59,4 +78,14 @@ def reset_mission(lat: float, lng: float, altitude: float,
         cols=cols,
         cell_size_m=cell_size_m,
     )
+
+    # El punto inicial del recorrido (sim_step=0) es la celda inferior izquierda,
+    # no el centro de la grilla. Ese es el "home" para el return-to-launch y la
+    # posición donde arranca el dron.
+    start_lat = search_grid.origin_lat - (rows - 0.5) * search_grid.cell_lat
+    start_lng = search_grid.origin_lng + 0.5 * search_grid.cell_lng
+    drone_state.lat = start_lat
+    drone_state.lng = start_lng
+    drone_state.home_lat = start_lat
+    drone_state.home_lng = start_lng
     return search_grid

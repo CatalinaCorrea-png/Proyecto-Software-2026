@@ -98,6 +98,16 @@ function App() {
     setMapDetections(prev => [detection, ...prev].slice(0, 10))
   }, [])
 
+  // Al completar la misión (dron en base), reemplazar las últimas 10 por el
+  // histórico completo para poder revisar todas las detecciones e imágenes.
+  useEffect(() => {
+    if (telemetry?.sweep_state !== 'completed') return
+    fetch('http://localhost:8000/mission/detections')
+      .then(r => r.json())
+      .then((all: Detection[]) => { if (Array.isArray(all)) setMapDetections(all) })
+      .catch(() => {})
+  }, [telemetry?.sweep_state])
+
   const handleMissionStart = useCallback(() => {
     setMapDetections([])
     setDetectionCount(0)

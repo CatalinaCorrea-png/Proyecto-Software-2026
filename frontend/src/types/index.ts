@@ -6,6 +6,16 @@ export interface GpsPosition {
   timestamp: number // Cuando se capturó, no cuando se procesó
 }
 
+// Detección pendiente de confirmación del operador (subconjunto de Detection)
+export interface PendingDetection {
+  id: string
+  position: GpsPosition
+  confidence: 'high' | 'medium' | 'low'
+  source: 'rgb' | 'thermal' | 'fusion'
+  temperature?: number | null
+  timestamp: number
+}
+
 // Estado del drone
 export interface DroneTelemetry {
   position: GpsPosition
@@ -14,6 +24,12 @@ export interface DroneTelemetry {
   speed: number          // m/s
   elapsed: number
   source?: 'hardware' | 'sim' | 'manual'
+  // Movimiento autónomo
+  sweep_state?: 'idle' | 'sweeping' | 'awaiting_confirmation'
+    | 'revisiting' | 'revisit_confirm' | 'completed'
+  paused?: boolean
+  pending_detection?: PendingDetection | null
+  revisit_queue?: PendingDetection[]   // detecciones MEDIUM marcadas para revisar
 }
 
 // Una detección de persona
@@ -25,6 +41,7 @@ export interface Detection {
   temperature?: number   // si viene de térmica
   timestamp: number
   imageUrl?: string      // captura del momento
+  status?: 'pending' | 'confirmed' | 'dismissed'   // resolución del operador
 }
 
 // Celda del mapa de cobertura

@@ -45,6 +45,8 @@ class Detection(Base):
     source: Mapped[str] = mapped_column(String)
     temperature: Mapped[float | None] = mapped_column(Float, nullable=True)
     rgb_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Resolución del operador: "pending" | "confirmed" | "dismissed"
+    status: Mapped[str] = mapped_column(String, default="pending")
 
     mission: Mapped["Mission"] = relationship(back_populates="detections")
 

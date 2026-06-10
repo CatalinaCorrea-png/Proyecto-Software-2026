@@ -20,16 +20,34 @@ const droneIcon = L.divIcon({
 })
 
 
-const detectionIcon = (confidence: Detection['confidence']) => {
-  const color = confidence === 'high' ? '#00C853'
-    : confidence === 'medium' ? '#FFD600'
-    : '#FF5252'
+type DetStatus = 'pending' | 'confirmed' | 'dismissed'
+
+const STATUS_STYLE: Record<DetStatus, {
+  color: string
+  fillOpacity: number
+  weight: number
+  dashArray?: string
+  markerOpacity: number
+  glow: boolean
+  border: string
+  label: string
+}> = {
+  confirmed: { color: '#00C853', fillOpacity: 0.25, weight: 2,   markerOpacity: 1,    glow: true,  border: '3px solid white',   label: 'Confirmada' },
+  pending:   { color: '#FFC107', fillOpacity: 0.12, weight: 1.5, markerOpacity: 0.95, glow: false, border: '2px dashed white',  label: 'Pendiente'  },
+  dismissed: { color: '#78909C', fillOpacity: 0.06, weight: 1, dashArray: '4 4', markerOpacity: 0.4, glow: false, border: '2px solid #B0BEC5', label: 'Descartada' },
+}
+
+const detStatus = (d: Detection): DetStatus => d.status ?? 'pending'
+
+const detectionIcon = (status: DetStatus) => {
+  const s = STATUS_STYLE[status]
+  const glow = s.glow ? `box-shadow:0 0 8px ${s.color},0 0 16px ${s.color};` : ''
   return L.divIcon({
     className: '',
     html: `<div style="
       width:18px;height:18px;
-      background:${color};border:3px solid white;border-radius:50%;
-      box-shadow:0 0 8px ${color},0 0 16px ${color};
+      background:${s.color};border:${s.border};border-radius:50%;
+      opacity:${s.markerOpacity};${glow}
     "></div>`,
     iconSize: [18, 18],
     iconAnchor: [9, 9],
@@ -47,19 +65,34 @@ interface SearchMapProps {
 
 const DEFAULT_CENTER = { lat: -34.6083, lng: -58.3712 }
 
+// Centra el mapa una sola vez sobre la primera posición válida del dron.
+// Después no vuelve a tocar la vista, así el operador controla zoom y pan.
 function AutoCenter({ position }: { position: [number, number] }) {
   const map = useMap()
-  const lastRef = useRef<string>('')
+  const done = useRef(false)
 
   useEffect(() => {
+    if (done.current) return
     if (position[0] === 0 && position[1] === 0) return
-    const key = `${position[0].toFixed(3)},${position[1].toFixed(3)}`
-    if (key !== lastRef.current) {
-      map.setView(position, 16)
-      lastRef.current = key
-    }
+    map.invalidateSize()
+    map.setView(position, 16)
+    done.current = true
   }, [position, map])
 
+  return null
+}
+
+// Recalcula el tamaño del mapa cuando el contenedor cambia de tamaño
+// (p. ej. al pasar de display:none a visible al iniciar la misión).
+function MapResizer() {
+  const map = useMap()
+  useEffect(() => {
+    const fix = () => map.invalidateSize()
+    const t = setTimeout(fix, 200)
+    const ro = new ResizeObserver(fix)
+    ro.observe(map.getContainer())
+    return () => { clearTimeout(t); ro.disconnect() }
+  }, [map])
   return null
 }
 
@@ -90,6 +123,32 @@ export function SearchMap({ telemetry, detections, trail, savedImages = [], onIm
         <span style={{ color: '#00BCD4', fontWeight: 'bold' }}>{coverage}%</span>
       </div>
 
+      {/* Leyenda de status de detecciones */}
+      {detections.length > 0 && (
+        <div style={{
+          position: 'absolute', bottom: 12, left: 12, zIndex: 1000,
+          background: '#0D1B2A', border: '1px solid #1E3A5F', borderRadius: 6,
+          padding: '6px 10px', fontFamily: 'monospace', fontSize: 10, color: '#90A4AE',
+          display: 'flex', flexDirection: 'column', gap: 3,
+        }}>
+          {(['confirmed', 'pending', 'dismissed'] as DetStatus[]).map(st => {
+            const s = STATUS_STYLE[st]
+            return (
+              <span key={st} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: s.color, opacity: s.markerOpacity,
+                  border: st === 'pending' ? '1px dashed #fff'
+                    : st === 'dismissed' ? '1px solid #B0BEC5' : 'none',
+                  boxShadow: s.glow ? `0 0 4px ${s.color}` : 'none',
+                }} />
+                {s.label}
+              </span>
+            )
+          })}
+        </div>
+      )}
+
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={13}
@@ -100,6 +159,7 @@ export function SearchMap({ telemetry, detections, trail, savedImages = [], onIm
           attribution="© OpenStreetMap"
         />
 
+        <MapResizer />
         {telemetry && <AutoCenter position={[telemetry.position.lat, telemetry.position.lng]} />}
 
         <CoverageGrid cells={cells} />
@@ -124,17 +184,19 @@ export function SearchMap({ telemetry, detections, trail, savedImages = [], onIm
           </Marker>
         )}
 
-        {/* Círculo de fondo para cada detección */}
+        {/* Círculo de fondo para cada detección — coloreado por status */}
         {detections.map(det => {
-          const color = det.confidence === 'high' ? '#00C853'
-            : det.confidence === 'medium' ? '#FFD600'
-            : '#FF5252'
+          const s = STATUS_STYLE[detStatus(det)]
           return (
             <Circle
               key={`circle-${det.id}`}
               center={[det.position.lat, det.position.lng]}
               radius={15}
-              pathOptions={{ color, fillColor: color, fillOpacity: 0.15, weight: 1.5 }}
+              pathOptions={{
+                color: s.color, fillColor: s.color,
+                fillOpacity: s.fillOpacity, weight: s.weight,
+                dashArray: s.dashArray,
+              }}
             />
           )
         })}
@@ -146,9 +208,15 @@ export function SearchMap({ telemetry, detections, trail, savedImages = [], onIm
             <Marker
               key={`marker-${det.id}`}
               position={[det.position.lat, det.position.lng]}
-              icon={detectionIcon(det.confidence)}
+              icon={detectionIcon(detStatus(det))}
             >
               <Popup>
+                <div style={{
+                  fontFamily: 'monospace', fontSize: 10, fontWeight: 'bold',
+                  color: STATUS_STYLE[detStatus(det)].color, marginBottom: 6,
+                }}>
+                  ● {STATUS_STYLE[detStatus(det)].label}
+                </div>
                 {img ? (
                   <>
                     <img

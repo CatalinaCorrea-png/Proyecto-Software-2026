@@ -20,5 +20,9 @@ def get_current_telemetry() -> dict:
             "status": drone_state.status,
             "speed": 0.0,
             "elapsed": elapsed,
+            "sweep_state": drone_state.sweep_state,
+            "paused": drone_state.sweep_paused,
+            "pending_detection": drone_state.pending_detection,
+            "revisit_queue": drone_state.revisit_queue,
         }
     }

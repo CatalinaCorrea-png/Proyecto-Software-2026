@@ -3,7 +3,7 @@ import { SearchMap } from '../components/map/SearchMap'
 import { TelemetryPanel } from '../components/drone/TelemetryPanel'
 import { DetectionAlert } from '../components/alerts/DetectionAlert'
 import { CameraFeed } from '../components/drone/CameraFeed'
-import { DroneController } from '../components/drone/DroneController'
+import { MissionControl } from '../components/drone/MissionControl'
 import { ImageDetailModal } from '../components/ImageDetailModal'
 import { useImageGallery } from '../hooks/useImageGallery'
 import type { Detection, DroneTelemetry, ImageMeta, WsMessage } from '../types'
@@ -91,7 +91,7 @@ export function Dashboard({
 
       </div>
 
-      {/* ── Panel alertas + control de vuelo ── */}
+      {/* ── Panel de alertas + control de misión (mitad y mitad) ── */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -100,13 +100,15 @@ export function Dashboard({
         overflow: 'hidden',
       }}>
 
-        {/* Alertas — ocupa el espacio disponible */}
-        <div style={{ flex: 1, minHeight: 0 }}>
+        {/* Alertas — mitad superior */}
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <DetectionAlert detections={mapDetections} />
         </div>
 
-        {/* Control de vuelo — tamaño fijo abajo */}
-        <DroneController droneStatus={telemetry?.status} />
+        {/* Control de misión autónoma — mitad inferior */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <MissionControl telemetry={telemetry} />
+        </div>
 
       </div>
 

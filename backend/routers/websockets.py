@@ -217,6 +217,20 @@ async def _handle_detection(websocket, det, geo_det, rgb_detections, frame, conf
     ms.detection_history.append(det_msg)
     await websocket.send_text(json.dumps({"type": "detection", "data": det_msg}))
 
+    # Triage del movimiento autónomo según confianza:
+    #   high   → frenar y esperar confirmación del operador
+    #   medium → encolar para revisita (Fase 3), seguir barriendo
+    if conf_label == "high":
+        # Opción B: un hallazgo nuevo (incluso en tránsito de revisita o RTL)
+        # frena al dron, pero recordamos la fase para retomarla al resolver.
+        if drone_state.sweep_state in ("sweeping", "revisiting", "returning_home"):
+            drone_state.resume_state = drone_state.sweep_state
+        drone_state.sweep_state = "awaiting_confirmation"
+        drone_state.pending_detection = det_msg
+        drone_state.pending_since = time.time()
+    elif conf_label == "medium":
+        drone_state.revisit_queue.append(det_msg)
+
     if ms.active_mission_id:
         db = SessionLocal()
         try:

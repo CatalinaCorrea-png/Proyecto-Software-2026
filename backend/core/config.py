@@ -26,3 +26,8 @@ CAMERA_INDEX = {
 # MongoDB
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 MONGODB_DB  = os.getenv("MONGODB_DB",  "aerosearch")
+
+# Movimiento autónomo: segundos que el dron espera la confirmación del operador
+# ante una detección de alta confianza antes de reanudar el barrido solo.
+# 0 = espera indefinida (sin auto-reanudación).
+DETECTION_HOLD_TIMEOUT_S = float(os.getenv("DETECTION_HOLD_TIMEOUT_S", "30"))
