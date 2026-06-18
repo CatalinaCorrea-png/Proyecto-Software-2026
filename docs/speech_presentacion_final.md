@@ -31,11 +31,19 @@
 
 ---
 
-## SLIDE 03 — El equipo
+## SLIDE 03 — El equipo, roadmap y velocity
 
 > "Detrás de esto estuvimos **seis personas**: Catalina, Nicolás, Dana, Maximiliano, Fernanda y Martín. Trabajamos con **Scrum a lo largo de 6 sprints**, todos tocando backend, frontend, hardware e IA — no nos encasillamos en un solo rol.
 >
-> En el roadmap pueden ver cómo fue creciendo: arrancamos en el Sprint 1 con el setup, los repos, el CI y el primer mapa. En el 2 sumamos WebSocket, telemetría y YOLO. En el 3, las bases de datos y Docker. En el 4, historial, estadísticas y control manual. En el 5 — el más fuerte — logramos el **movimiento autónomo y la conexión real entre hardware y software**. Y nos queda el Sprint 6, donde vamos por roles de usuario, modo solo lectura y tests end-to-end."
+> En el roadmap ven cómo fue creciendo el producto: Sprint 1, infraestructura, el mapa con trakeo del dron y el server en el ESP32-CAM. Sprint 2, la detección con YOLO, la grilla y el control PID. Sprint 3, persistencia de misiones. Sprint 4, estadísticas y autenticación. Sprint 5 — el más cargado — la conexión real del dron con la app y el refactor de vuelo autónomo. Y el Sprint 6, en curso, con roles de usuario y tests end-to-end.
+>
+> Pero quiero detenerme en **cómo lo medimos**, porque acá la metodología ágil se ve en números. Estimamos cada tarea en **story points usando la escala de Fibonacci** — 1, 2, 3, 5, 8, 13 — justamente porque a mayor tamaño, mayor incertidumbre, y los saltos de Fibonacci reflejan eso mejor que una escala lineal.
+>
+> Con eso medimos el **velocity de cada sprint**: cuántos puntos nos comprometíamos versus cuántos completábamos. En total comprometimos **385 puntos y completamos 302 — un 78% de cumplimiento**, con un velocity promedio de unos **58 puntos por sprint** en los primeros cinco.
+>
+> Y lo interesante es leer la curva con honestidad: arrancamos muy ajustados — 97% en el Sprint 1 — pero en el 2 y el 3 nos **sobre-comprometimos**: cargamos más puntos de los que el equipo podía entregar, y el cumplimiento bajó al 83-87%. Esa señal del velocity nos hizo **ajustar la planificación**: en el Sprint 4 volvimos a un alcance realista y cerramos 96%. El Sprint 6 figura en 22%, pero es simplemente porque **está en curso** — son los puntos completados hasta hoy, no un sprint fallido.
+>
+> La lección de fondo: el velocity no es para castigarse, es un **termómetro** que nos enseñó a comprometernos con lo que de verdad podíamos cumplir."
 
 *(bajar a slide 4)*
 
@@ -158,7 +166,8 @@
 
 ## Notas para la exposición
 
-- **Ritmo:** las slides 4 y 5 son las más densas; las 7 y 8 (FODA) son el corazón de la parte de proceso. Si vas corto de tiempo, en la 5 nombrá 3 features y seguí, y en la 7 leé solo un par de puntos por cuadrante (el resto está en pantalla).
+- **Ritmo:** las slides 3 (velocity), 4 y 5 son las más densas; las 7 y 8 (FODA) son el corazón de la parte de proceso. Si vas corto de tiempo, en la 3 quedate con la idea del velocity y el 78% de cumplimiento, en la 5 nombrá 3 features, y en la 7 leé solo un par de puntos por cuadrante (el resto está en pantalla).
+- **Slide 3 (velocity):** el gráfico muestra cada barra como *comprometido* (track) con la parte llena = *completado*. Es buen momento para conectar con la historia ágil: sobre-compromiso en S2-S3 → ajuste en S4. El número clave para decir en voz alta es **385 comprometidos / 302 completados = 78%**.
 - **Reparto sugerido (6 personas):** 1–2 quien abre · 3 equipo · 4–5 parte técnica · 6 flujo/demo · 7–8 FODA y testing · 9 aprendizajes · 10 cierre. Si hay demo en vivo, encajala después de la slide 6.
 - **Fotos del equipo:** poné las imágenes en `docs/team/` con los nombres indicados; si falta alguna, caen las iniciales automáticamente.
 - **Navegación:** flechas ↓/→ o barra espaciadora pasan de slide; los puntitos de la derecha saltan directo.

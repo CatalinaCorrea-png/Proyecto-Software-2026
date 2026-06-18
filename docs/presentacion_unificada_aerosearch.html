@@ -125,18 +125,38 @@
   .tl-dot.done { background: var(--accent); }
   .tl-item h4 { font-size: 12px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; }
   .tl-item p { font-size: 10px; color: var(--text3); line-height: 1.45; max-width: 140px; }
+  .tl-pts { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--accent); margin-top: 6px; letter-spacing: .3px; white-space: nowrap; }
+  .tl-pts.wip { color: var(--yellow); }
+
+  /* ── velocity chart ── */
+  .velocity-wrap { max-width: 1060px; width: 100%; margin-top: 34px; }
+  .vchart { display: flex; gap: 16px; align-items: flex-end; justify-content: center; height: 150px; padding: 0 10px; }
+  .vcol { flex: 1; max-width: 88px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .vpct { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text2); margin-bottom: 6px; }
+  .vbar { width: 32px; border-radius: 6px 6px 0 0; background: var(--bg3); border: 1px solid var(--border); position: relative; display: flex; align-items: flex-end; transition: transform .2s; }
+  .vbar:hover { transform: translateY(-3px); }
+  .vfill { width: 100%; border-radius: 5px 5px 0 0; background: linear-gradient(180deg, var(--accent), var(--accent2)); }
+  .vfill.wip { background: linear-gradient(180deg, var(--yellow), #C99700); }
+  .vlbl { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); margin-top: 9px; }
+  .vlegend { display: flex; gap: 22px; justify-content: center; margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); }
+  .vlegend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+  .vmetrics { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 22px; }
+  .vm { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 16px; text-align: center; }
+  .vm b { display: block; font-size: 18px; font-weight: 800; color: var(--accent); line-height: 1.1; }
+  .vm small { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text3); letter-spacing: .5px; }
+  .vm.fib b { color: var(--green); font-size: 14px; letter-spacing: 1px; }
 
   /* ── equipo ── */
   .team { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 880px; width: 100%; }
-  .tm { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 24px 20px; text-align: center; transition: border-color .3s, transform .25s; }
+  .tm { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 16px 14px; text-align: center; transition: border-color .3s, transform .25s; }
   .tm:hover { border-color: var(--accent); transform: translateY(-3px); }
   /* avatar: muestra la foto si existe; si no, caen las iniciales detras */
   .tm-av {
-    position: relative; width: 64px; height: 64px; border-radius: 50%;
+    position: relative; width: 54px; height: 54px; border-radius: 50%;
     background: linear-gradient(135deg, rgba(255,109,0,0.12), rgba(68,138,255,0.12));
-    border: 2px solid var(--border); margin: 0 auto 10px; overflow: hidden;
+    border: 2px solid var(--border); margin: 0 auto 9px; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    font-size: 19px; font-weight: 800; color: var(--accent);
+    font-size: 16px; font-weight: 800; color: var(--accent);
     font-family: 'JetBrains Mono', monospace;
   }
   .tm-av img {
@@ -346,15 +366,40 @@
     </div>
   </div>
 
-  <div style="margin-top:40px;">
-    <div class="label" style="margin-bottom:20px;">ROADMAP DE SPRINTS</div>
+  <div style="margin-top:32px;">
+    <div class="label" style="margin-bottom:18px;">ROADMAP DE SPRINTS &middot; SCRUM</div>
     <div class="timeline">
-      <div class="tl-item"><div class="tl-dot done"></div><h4>Sprint 1</h4><p>Setup proyecto, repos, CI, primer endpoint, mapa, simulador de vuelo</p></div>
-      <div class="tl-item"><div class="tl-dot done"></div><h4>Sprint 2</h4><p>WebSocket, telemetria, YOLO, camara multi-fuente</p></div>
-      <div class="tl-item"><div class="tl-dot done"></div><h4>Sprint 3</h4><p>SQLite + MongoDB, galeria, Docker</p></div>
-      <div class="tl-item"><div class="tl-dot done"></div><h4>Sprint 4</h4><p>Historial, stats, control manual</p></div>
-      <div class="tl-item"><div class="tl-dot done"></div><h4>Sprint 5</h4><p>Movimiento autónomo, conexion Hardware y Software</p></div>
-      <div class="tl-item"><div class="tl-dot"></div><h4>Sprint 6</h4><p>Roles de usuario, modo solo lectura, Test E2E</p></div>
+      <div class="tl-item"><div class="tl-dot done"></div><h4>Sprint 1</h4><p>Setup, repos, CI, mapa + trakeo, server HTTP en ESP32-CAM</p><div class="tl-pts">66/68 pts &middot; 97%</div></div>
+      <div class="tl-item"><div class="tl-dot done"></div><h4>Sprint 2</h4><p>YOLO, grilla de exploracion, control de vuelo PID</p><div class="tl-pts">45/52 pts &middot; 87%</div></div>
+      <div class="tl-item"><div class="tl-dot done"></div><h4>Sprint 3</h4><p>Persistencia de misiones y detecciones, carga de mision</p><div class="tl-pts">53/64 pts &middot; 83%</div></div>
+      <div class="tl-item"><div class="tl-dot done"></div><h4>Sprint 4</h4><p>Estadisticas, auth de usuario, pruebas de vuelo</p><div class="tl-pts">49/51 pts &middot; 96%</div></div>
+      <div class="tl-item"><div class="tl-dot done"></div><h4>Sprint 5</h4><p>Conexion dron-app, refactor vuelo autonomo, demo</p><div class="tl-pts">76/91 pts &middot; 84%</div></div>
+      <div class="tl-item"><div class="tl-dot"></div><h4>Sprint 6</h4><p>Roles de usuario, modo solo lectura, tests E2E</p><div class="tl-pts wip">13/59 pts &middot; en curso</div></div>
+    </div>
+
+    <div class="velocity-wrap">
+      <div class="label" style="margin-bottom:14px; text-align:center;">VELOCITY POR SPRINT &middot; STORY POINTS (comprometidos vs. completados)</div>
+      <div class="vchart">
+        <div class="vcol"><div class="vpct">97%</div><div class="vbar" style="height:97px;"><div class="vfill" style="height:94px;"></div></div><div class="vlbl">S1</div></div>
+        <div class="vcol"><div class="vpct">87%</div><div class="vbar" style="height:74px;"><div class="vfill" style="height:64px;"></div></div><div class="vlbl">S2</div></div>
+        <div class="vcol"><div class="vpct">83%</div><div class="vbar" style="height:91px;"><div class="vfill" style="height:76px;"></div></div><div class="vlbl">S3</div></div>
+        <div class="vcol"><div class="vpct">96%</div><div class="vbar" style="height:73px;"><div class="vfill" style="height:70px;"></div></div><div class="vlbl">S4</div></div>
+        <div class="vcol"><div class="vpct">84%</div><div class="vbar" style="height:130px;"><div class="vfill" style="height:109px;"></div></div><div class="vlbl">S5</div></div>
+        <div class="vcol"><div class="vpct" style="color:var(--yellow);">22%</div><div class="vbar" style="height:84px;"><div class="vfill wip" style="height:19px;"></div></div><div class="vlbl">S6</div></div>
+      </div>
+      <div class="vlegend">
+        <span><i style="background:linear-gradient(180deg,var(--accent),var(--accent2));"></i>Completados</span>
+        <span><i style="background:var(--bg3);border:1px solid var(--border);"></i>Comprometidos</span>
+        <span><i style="background:linear-gradient(180deg,var(--yellow),#C99700);"></i>En curso (S6)</span>
+      </div>
+
+      <div class="vmetrics">
+        <div class="vm"><b>385</b><small>PTS COMPROMETIDOS</small></div>
+        <div class="vm"><b>302</b><small>PTS COMPLETADOS</small></div>
+        <div class="vm"><b>78%</b><small>CUMPLIMIENTO GLOBAL</small></div>
+        <div class="vm"><b>~58</b><small>VELOCITY PROM. (S1-S5)</small></div>
+        <div class="vm fib"><b>1&middot;2&middot;3&middot;5&middot;8&middot;13</b><small>ESCALA FIBONACCI</small></div>
+      </div>
     </div>
   </div>
 </section>
