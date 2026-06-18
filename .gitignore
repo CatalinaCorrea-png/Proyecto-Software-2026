@@ -15,6 +15,7 @@ __pycache__/
 # Excepción: modelo fine-tuneado (6.2 MB, entra en GitHub)
 !backend/yolov8n_aerial.pt
 !backend/yolov8n_tuned_v2.pt
+!backend/yolov8n_tuned_v3.pt
 
 # Entorno virtual
 venv/
@@ -38,6 +39,7 @@ Thumbs.db
 
 # imagenes de detecciones
 media/detections
+backend/media/videos/unsam/
 
 # datasets demasiado pesados
 datasets/
