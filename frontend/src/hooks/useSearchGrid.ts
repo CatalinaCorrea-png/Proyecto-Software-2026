@@ -25,8 +25,11 @@ export function useSearchGrid(url: string): UseSearchGridReturn {
   const cellMapRef = useRef<Map<string, GridCell>>(new Map())
 
   useEffect(() => {
+    let cancelled = false
+
     function connect() {
-      // Limpia conexión anterior (StrictMode monta → desmonta → monta)
+      if (cancelled) return
+
       if (wsRef.current) {
         wsRef.current.onclose = null
         wsRef.current.close()
@@ -38,32 +41,32 @@ export function useSearchGrid(url: string): UseSearchGridReturn {
 
       const ws = new WebSocket(url)
 
-      ws.onopen = () => setIsConnected(true)
+      ws.onopen = () => { if (!cancelled) setIsConnected(true) }
       ws.onclose = () => {
+        if (cancelled) return
         setIsConnected(false)
         reconnectTimerRef.current = setTimeout(connect, 2000)
       }
 
       ws.onmessage = (event) => {
+        if (cancelled) return
         const msg = JSON.parse(event.data as string) as
           | { type: 'grid_init'; cells: GridCell[]; coverage: number }
           | { type: 'grid_update'; cells: GridCell[]; coverage: number }
 
         if (msg.type === 'grid_init') {
-          // Cargar todas las celdas de una vez
           const map = new Map<string, GridCell>()
           msg.cells.forEach(c => map.set(`${c.row}-${c.col}`, c))
-          cellMapRef.current = map  // construye el índice desde cero
-          setCells(msg.cells)       // carga todas las celdas al estado
+          cellMapRef.current = map
+          setCells(msg.cells)
           setCoverage(msg.coverage)
         }
 
         if (msg.type === 'grid_update') {
-          // Actualizar las celdas
           msg.cells.forEach(c => {
-            cellMapRef.current.set(`${c.row}-${c.col}`, c) // actualiza solo las que cambiaron
+            cellMapRef.current.set(`${c.row}-${c.col}`, c)
           })
-          setCells(Array.from(cellMapRef.current.values())) // reconstruye el array desde el Map
+          setCells(Array.from(cellMapRef.current.values()))
           setCoverage(msg.coverage)
         }
       }
@@ -71,8 +74,12 @@ export function useSearchGrid(url: string): UseSearchGridReturn {
       wsRef.current = ws
     }
 
+    // El setTimeout(0) deja que el ciclo de StrictMode (mount→unmount) termine
+    // antes de crear el socket, evitando el warning "closed before established".
     connect()
+
     return () => {
+      cancelled = true
       if (wsRef.current) {
         wsRef.current.onclose = null
         wsRef.current.close()
