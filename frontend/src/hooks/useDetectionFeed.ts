@@ -82,11 +82,10 @@ export function useDetectionFeed(url: string): UseDetectionFeedReturn {
       wsRef.current = ws
     }
 
-    const initTimer = setTimeout(connect, 0)
+    connect()
 
     return () => {
       cancelled = true
-      clearTimeout(initTimer)
       if (wsRef.current) {
         wsRef.current.onclose = null
         wsRef.current.close()

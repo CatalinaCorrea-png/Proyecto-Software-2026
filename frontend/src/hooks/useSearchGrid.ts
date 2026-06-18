@@ -76,11 +76,10 @@ export function useSearchGrid(url: string): UseSearchGridReturn {
 
     // El setTimeout(0) deja que el ciclo de StrictMode (mount→unmount) termine
     // antes de crear el socket, evitando el warning "closed before established".
-    const initTimer = setTimeout(connect, 0)
+    connect()
 
     return () => {
       cancelled = true
-      clearTimeout(initTimer)
       if (wsRef.current) {
         wsRef.current.onclose = null
         wsRef.current.close()
