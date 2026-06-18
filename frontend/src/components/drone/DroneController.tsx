@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-const API = 'http://localhost:8000'
+import { API_URL as API } from '../../config'
 const SEND_INTERVAL_MS = 100
 
 interface JoystickProps {

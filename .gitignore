@@ -19,11 +19,19 @@ __pycache__/
 
 # Entorno virtual
 venv/
+
+# Variables de entorno (nunca commitear credenciales reales)
 .env
+**/.env
 
 # Node
 node_modules/
 dist/
+
+# Reportes de cobertura (generados localmente y en CI)
+coverage/
+coverage.xml
+.coverage
 
 # OS
 .DS_Store

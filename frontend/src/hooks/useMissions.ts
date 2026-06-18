@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API_URL } from '../config'
 
 export interface Mission {
   id: number
@@ -45,7 +46,7 @@ export function useMissions() {
   const fetchMissions = async (showSpinner = false) => {
     if (showSpinner) setLoading(true)
     try {
-      const res = await fetch('http://localhost:8000/missions')
+      const res = await fetch(`${API_URL}/missions`)
       setMissions(await res.json())
     } catch (e) {
       console.error('Error fetching missions:', e)
@@ -56,7 +57,7 @@ export function useMissions() {
 
   const fetchDetail = async (id: number): Promise<MissionDetail | null> => {
     try {
-      const res = await fetch(`http://localhost:8000/missions/${id}`)
+      const res = await fetch(`${API_URL}/missions/${id}`)
       return await res.json()
     } catch {
       return null
@@ -65,7 +66,7 @@ export function useMissions() {
 
   const deleteMission = async (id: number): Promise<boolean> => {
     try {
-      const res = await fetch(`http://localhost:8000/missions/${id}`, { method: 'DELETE' })
+      const res = await fetch(`${API_URL}/missions/${id}`, { method: 'DELETE' })
       if (res.ok) {
         setMissions(prev => prev.filter(m => m.id !== id))
         return true
