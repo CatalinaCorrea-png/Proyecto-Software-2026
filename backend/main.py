@@ -1,4 +1,5 @@
 import asyncio
+import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -30,6 +31,8 @@ from routers import drone, missions_sql, websockets
 
 init_db()
 close_orphan_missions()
+
+yolo = YoloDetector()
 
 
 def _print_startup_banner():

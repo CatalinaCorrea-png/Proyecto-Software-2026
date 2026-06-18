@@ -39,8 +39,11 @@ export function useDetectionFeed(url: string): UseDetectionFeedReturn {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    let cancelled = false
+
     function connect() {
-      // Limpia conexión anterior (StrictMode monta → desmonta → monta)
+      if (cancelled) return
+
       if (wsRef.current) {
         wsRef.current.onclose = null
         wsRef.current.close()
@@ -52,13 +55,15 @@ export function useDetectionFeed(url: string): UseDetectionFeedReturn {
 
       const ws = new WebSocket(url)
 
-      ws.onopen = () => setIsConnected(true)
+      ws.onopen = () => { if (!cancelled) setIsConnected(true) }
       ws.onclose = () => {
+        if (cancelled) return
         setIsConnected(false)
         reconnectTimerRef.current = setTimeout(connect, 2000)
       }
 
       ws.onmessage = (event) => {
+        if (cancelled) return
         const msg = JSON.parse(event.data as string) as DetectionMessage
 
         if (msg.type === 'frame') {
@@ -77,8 +82,11 @@ export function useDetectionFeed(url: string): UseDetectionFeedReturn {
       wsRef.current = ws
     }
 
-    connect()
+    const initTimer = setTimeout(connect, 0)
+
     return () => {
+      cancelled = true
+      clearTimeout(initTimer)
       if (wsRef.current) {
         wsRef.current.onclose = null
         wsRef.current.close()
