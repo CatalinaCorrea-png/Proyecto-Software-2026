@@ -106,7 +106,7 @@ export function Dashboard({
         </div>
 
         {/* Control de vuelo — tamaño fijo abajo */}
-        <DroneController droneStatus={telemetry?.status} />
+        {/* <DroneController droneStatus={telemetry?.status} /> */}
 
       </div>
 
