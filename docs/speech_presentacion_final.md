@@ -1,6 +1,6 @@
 # 🎤 Speech — Presentación Final AeroSearch AI (versión unificada + FODA)
 
-> Guion para presentar `presentacion_unificada_aerosearch.html` (10 slides).
+> Guion para presentar `presentacion_unificada_aerosearch.html` (11 slides).
 > Tono natural, rioplatense. Duración aproximada: **9–11 minutos**.
 
 ---
@@ -134,7 +134,23 @@
 
 ---
 
-## SLIDE 09 — Aprendizajes y conclusiones *(foco ágil)*
+## SLIDE 09 — Posible monetización *(visión a futuro)*
+
+> "Y si miramos un poco más allá del aula: este proyecto **no tiene por qué terminar acá**. Pensamos, de forma general, a quién podría servirle y hacia dónde podría crecer.
+>
+> En cuanto a **posibles clientes**, el caso más directo son los **bomberos y la Defensa Civil**, organismos públicos como protección civil o parques nacionales, ONGs de rescate de montaña, e incluso seguridad privada para vigilar predios grandes — minería, energía, campos.
+>
+> Pero lo más interesante es que **el mismo motor de visión y telemetría sirve para mucho más que rescate**. Ahí aparece la **expansión**: en el **agro**, para conteo de ganado y monitoreo de cultivos; en **eventos masivos**, para contar y detectar personas en aglomeraciones; en **seguros**, para inspección aérea tras una catástrofe; o en **seguridad perimetral**.
+>
+> O sea, hay un **mercado dual**: uno de alto impacto social, el rescate, y otro comercial — agro, eventos, seguridad — que perfectamente podría financiar el desarrollo del primero. Y como vías posibles imaginamos una **licencia o suscripción** de la plataforma, vender el **kit de hardware más software**, o licenciar la **detección como una API** para que otros la integren.
+>
+> No es un plan cerrado, pero deja claro que lo que construimos tiene **recorrido más allá de la nota."*
+
+*(bajar a slide 10)*
+
+---
+
+## SLIDE 10 — Aprendizajes y conclusiones *(foco ágil)*
 
 > "¿Qué nos llevamos de todo esto? Más que código, una **forma de trabajar**.
 >
@@ -148,11 +164,11 @@
 >
 > La conclusión es esta: un proyecto grande **no se sostiene por talento individual, sino por proceso**. Las metodologías ágiles dejaron de ser teoría de parcial: las **vivimos**. El FODA nos dio el mapa, el backlog las prioridades y las retros la mejora continua. Nos llevamos un producto que funciona — y, sobre todo, una manera de trabajar que podemos repetir en cualquier equipo."
 
-*(bajar a slide 10)*
+*(bajar a slide 11)*
 
 ---
 
-## SLIDE 10 — Cierre
+## SLIDE 11 — Cierre
 
 > "Para cerrar: AeroSearch pasó de ser **una idea en un Sprint Planning** a un producto funcional con drone, IA, mapa en tiempo real y despliegue containerizado.
 >
@@ -168,6 +184,7 @@
 
 - **Ritmo:** las slides 3 (velocity), 4 y 5 son las más densas; las 7 y 8 (FODA) son el corazón de la parte de proceso. Si vas corto de tiempo, en la 3 quedate con la idea del velocity y el 78% de cumplimiento, en la 5 nombrá 3 features, y en la 7 leé solo un par de puntos por cuadrante (el resto está en pantalla).
 - **Slide 3 (velocity):** el gráfico muestra cada barra como *comprometido* (track) con la parte llena = *completado*. Es buen momento para conectar con la historia ágil: sobre-compromiso en S2-S3 → ajuste en S4. El número clave para decir en voz alta es **385 comprometidos / 302 completados = 78%**.
-- **Reparto sugerido (6 personas):** 1–2 quien abre · 3 equipo · 4–5 parte técnica · 6 flujo/demo · 7–8 FODA y testing · 9 aprendizajes · 10 cierre. Si hay demo en vivo, encajala después de la slide 6.
+- **Reparto sugerido (6 personas):** 1–2 quien abre · 3 equipo · 4–5 parte técnica · 6 flujo/demo · 7–8 FODA y testing · 9 monetización · 10 aprendizajes · 11 cierre. Si hay demo en vivo, encajala después de la slide 6.
+- **Slide 9 (monetización):** es liviana y a futuro — no te enredes en números ni precios. El concepto fuerte para dejar picando es el **mercado dual**: rescate (impacto social) + agro/eventos/seguridad (comercial).
 - **Fotos del equipo:** poné las imágenes en `docs/team/` con los nombres indicados; si falta alguna, caen las iniciales automáticamente.
 - **Navegación:** flechas ↓/→ o barra espaciadora pasan de slide; los puntitos de la derecha saltan directo.
