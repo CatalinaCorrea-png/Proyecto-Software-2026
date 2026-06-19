@@ -5,7 +5,7 @@
 
 ---
 
-## SLIDE 01 — Portada *(quien abre)*
+## SLIDE 01 — Portada _(quien abre)_
 
 > "Buenas tardes a todos. Somos el Grupo 1 y venimos a presentarles **AeroSearch AI**, el proyecto en el que trabajamos durante todo el cuatrimestre.
 >
@@ -13,7 +13,7 @@
 >
 > Déjenme empezar por el porqué."
 
-*(bajar a slide 2)*
+_(bajar a slide 2)_
 
 ---
 
@@ -27,7 +27,7 @@
 >
 > Nuestra propuesta es un **drone autónomo** que recorre una grilla de búsqueda de forma sistemática, detecta personas con inteligencia artificial y manda **alertas geolocalizadas en tiempo real** a un centro de comando web. Que el operador no tenga que mirar el video: que el sistema le avise."
 
-*(bajar a slide 3)*
+_(bajar a slide 3)_
 
 ---
 
@@ -45,9 +45,9 @@
 >
 > La lección de fondo: el velocity no es para castigarse, es un **termómetro** que nos enseñó a comprometernos con lo que de verdad podíamos cumplir."
 
-*(bajar a slide 4)*
+_(bajar a slide 4)_
 
-> 💡 *Nota: las iniciales de cada integrante se reemplazan por la foto si está en `docs/team/` (`catalina.jpg`, `nicolas.jpg`, `dana.jpg`, `maximiliano.jpg`, `fernanda.jpg`, `martin.jpg`).*
+> 💡 _Nota: las iniciales de cada integrante se reemplazan por la foto si está en `docs/team/` (`catalina.jpg`, `nicolas.jpg`, `dana.jpg`, `maximiliano.jpg`, `fernanda.jpg`, `martin.jpg`)._
 
 ---
 
@@ -63,7 +63,7 @@
 >
 > Lo interesante es **cómo se comunican**: el frontend habla con el backend por **WebSocket y REST**, y el backend habla con el drone por **UDP bidireccional** — UDP porque para telemetría necesitábamos baja latencia. Cada capa está modularizada: cada bloque hace una sola cosa, y eso fue clave para trabajar de a seis sin pisarnos."
 
-*(bajar a slide 5)*
+_(bajar a slide 5)_
 
 ---
 
@@ -82,25 +82,25 @@
 >
 > No quiero detenerme en cada una; lo importante es que es un sistema **completo**, no una demo de una sola feature."
 
-*(bajar a slide 6)*
+_(bajar a slide 6)_
 
 ---
 
-## SLIDE 06 — Flujo de una misión *(con escenario real)*
+## SLIDE 06 — Flujo de una misión _(con escenario real)_
 
 > "Para que se entienda cómo se usa, sigamos una misión de principio a fin — y en cada paso, fíjense en la etiqueta verde de qué cambiaría **en un escenario real**:
 >
-> **Uno — Configurar.** El operador define nombre, coordenadas GPS, altitud y grilla. *En real*, el coordinador delimita la zona de búsqueda en segundos, sin planear rutas a mano.
+> **Uno — Configurar.** El operador define nombre, coordenadas GPS, altitud y grilla. _En real_, el coordinador delimita la zona de búsqueda en segundos, sin planear rutas a mano.
 >
-> **Dos — Vuelo y barrido.** El drone recorre la grilla en serpentina y el mapa pinta las celdas exploradas. *En real*, cubre en minutos terreno que a pie llevaría horas — incluso de noche o en zona inaccesible.
+> **Dos — Vuelo y barrido.** El drone recorre la grilla en serpentina y el mapa pinta las celdas exploradas. _En real_, cubre en minutos terreno que a pie llevaría horas — incluso de noche o en zona inaccesible.
 >
-> **Tres — Detección en tiempo real.** Cada frame pasa en paralelo por YOLO y por el térmico; si la confianza es media o alta, salta la alerta geolocalizada. *En real*, el rescatista no tiene que mirar el video: el sistema le dice dónde mirar, y eso **reduce el error humano por fatiga**.
+> **Tres — Detección en tiempo real.** Cada frame pasa en paralelo por YOLO y por el térmico; si la confianza es media o alta, salta la alerta geolocalizada. _En real_, el rescatista no tiene que mirar el video: el sistema le dice dónde mirar, y eso **reduce el error humano por fatiga**.
 >
-> **Cuatro — Reporte.** Queda todo guardado: cobertura, batería, detecciones. *En real*, deja trazabilidad de qué se cubrió y dónde, útil para coordinar relevos y auditar la operación.
+> **Cuatro — Reporte.** Queda todo guardado: cobertura, batería, detecciones. _En real_, deja trazabilidad de qué se cubrió y dónde, útil para coordinar relevos y auditar la operación.
 >
 > Y la foto completa: AeroSearch convierte una búsqueda **lenta, peligrosa y dependiente de gente** en una **sistemática, geolocalizada y trazable** — ampliando el área cubierta por hora y liberando a los equipos humanos para que actúen solo donde hay una detección concreta, ganando minutos dentro de esa ventana crítica de 72 horas."
 
-*(bajar a slide 7)*
+_(bajar a slide 7)_
 
 ---
 
@@ -116,7 +116,7 @@
 >
 > Y en **Amenazas**, lo que nos rodea y no controlamos del todo: la dependencia del hardware, la latencia del ML sin medir, la deuda técnica que se acumula, los datos sensibles sin cifrar y un CI/CD incompleto."
 
-*(bajar a slide 8)*
+_(bajar a slide 8)_
 
 ---
 
@@ -130,44 +130,42 @@
 >
 > Y esa es la conclusión del FODA: convirtió **percepciones difusas en un backlog priorizado**. No solo describió el proyecto — **cambió cómo trabajamos**."
 
-*(bajar a slide 9)*
+_(bajar a slide 9)_
 
 ---
 
-## SLIDE 09 — Aprendizajes y conclusiones *(foco ágil)*
+## SLIDE 09 — Aprendizajes y conclusiones
 
-> "¿Qué nos llevamos de todo esto? Más que código, una **forma de trabajar**.
+> "¿Qué nos llevamos de todo esto? La verdad, más que el código en sí, nos llevamos una forma distinta de trabajar.
 >
-> Aprendimos **Scrum en serio, no de adorno** — planning, review y retro en cada sprint. Y entendimos que un **backlog vivo y priorizado vale más que un plan rígido de cuatro meses**.
+> Lo de Scrum dejó de ser parte de la teoría. Hacer planning, review y retro sprint a sprint, en serio, cambia cómo encarás el proyecto — no es lo mismo verlo en una diapositiva que vivirlo seis veces seguidas.
 >
-> Aprendimos que **priorizar es decidir qué NO hacer**: el FODA y el backlog nos enseñaron a elegir lo de mayor impacto y postergar el resto a conciencia, en vez de querer todo a la vez.
+> También aprendimos a priorizar, que hace y qué **no** hacer: elegir qué atacar primero y dejar el resto anotado, muchas veces hubieron tareas que se tuvieron que pasar a el siguiente sprint (eso creo que es por falta de practica y quiza subestimar el tiempo que va a tardar en completarce una tarea).
 >
-> Aprendimos a **iterar y adaptarnos** — casi nada salió bien a la primera. Entregar algo simple, mostrarlo en la review y mejorarlo al sprint siguiente fue mucho más efectivo que buscar la perfección desde el arranque.
+> Algo que nos dimos cuanta tambien es que estimar con story points sirve para, ademas de poder tener una coherencia en la cantidad de tareas que uno hace por sprint, te permite **cuantificar quién está aportando y quién no**. En nuestro caso no hizo falta usarlo para eso por que nuestro equipo funcionó parejo, pero quedó claro que con esos números se puede detectar bastante rápido si alguien esta trabajando o no.
 >
-> Y aprendimos a **trabajar en equipo de verdad**: seis personas en un repo, con branches, pull requests, code reviews y conflictos de merge — comunicándonos cuando algo se rompía en lugar de arreglarlo en silencio.
+> Y después está lo del **hardware**. De los seis, dos ya venían con algo de experiencia con el ESP32, pero igual hizo falta aprender bastante — el hardware no perdona, un cable mal puesto o una alimentación inestable, alguna cosa mal soldada te tira abajo una tarde entera de pruebas.
 >
-> La conclusión es esta: un proyecto grande **no se sostiene por talento individual, sino por proceso**. Las metodologías ágiles dejaron de ser teoría de parcial: las **vivimos**. El FODA nos dio el mapa, el backlog las prioridades y las retros la mejora continua. Nos llevamos un producto que funciona — y, sobre todo, una manera de trabajar que podemos repetir en cualquier equipo."
+> Si hay una conclusión de fondo es esta: un proyecto grande hacerlo sin un plan no es posible, es algo que se sostiene por proceso constante de esfuerzo medido. El backlog priorizado nos dio dirección, los story points nos dieron honestidad, y el hardware/software nos bajó a tierra ya que fue un proyecto complicado."
 
-*(bajar a slide 10)*
+_(bajar a slide 10)_
 
 ---
 
 ## SLIDE 10 — Cierre
 
-> "Para cerrar: AeroSearch pasó de ser **una idea en un Sprint Planning** a un producto funcional con drone, IA, mapa en tiempo real y despliegue containerizado.
+> "Para cerrar: basicamente nuestro proyecto AeroSearch arrancó como una idea quiza un poco mas simple y terminó siendo un producto que funciona de verdad para mas cosas que lo que se penso en un inicio con hardware, firmware, IA, back, front, ademas de bases de datos.
 >
-> En números: **6 sprints, 6 integrantes, 3 capas de tecnología, 2 bases de datos y 6 módulos de tests** — y un FODA que convertimos en backlog.
+> Y nada, la verdad estamos contentos con lo que armamos, y nos gusta que pudimos hacer funcionar un proyecto que la verdad que nos gusta posta.
 >
-> Estamos muy orgullosos de lo que construimos, y lo más lindo es que cada una de estas funcionalidades hoy **anda**.
->
-> Muchas gracias — y quedamos para las preguntas que quieran hacernos."
+> Muchas gracias, quedamos para las preguntas."
 
 ---
 
 ## Notas para la exposición
 
 - **Ritmo:** las slides 3 (velocity), 4 y 5 son las más densas; las 7 y 8 (FODA) son el corazón de la parte de proceso. Si vas corto de tiempo, en la 3 quedate con la idea del velocity y el 78% de cumplimiento, en la 5 nombrá 3 features, y en la 7 leé solo un par de puntos por cuadrante (el resto está en pantalla).
-- **Slide 3 (velocity):** el gráfico muestra cada barra como *comprometido* (track) con la parte llena = *completado*. Es buen momento para conectar con la historia ágil: sobre-compromiso en S2-S3 → ajuste en S4. El número clave para decir en voz alta es **385 comprometidos / 302 completados = 78%**.
+- **Slide 3 (velocity):** el gráfico muestra cada barra como _comprometido_ (track) con la parte llena = _completado_. Es buen momento para conectar con la historia ágil: sobre-compromiso en S2-S3 → ajuste en S4. El número clave para decir en voz alta es **385 comprometidos / 302 completados = 78%**.
 - **Reparto sugerido (6 personas):** 1–2 quien abre · 3 equipo · 4–5 parte técnica · 6 flujo/demo · 7–8 FODA y testing · 9 aprendizajes · 10 cierre. Si hay demo en vivo, encajala después de la slide 6.
 - **Fotos del equipo:** poné las imágenes en `docs/team/` con los nombres indicados; si falta alguna, caen las iniciales automáticamente.
 - **Navegación:** flechas ↓/→ o barra espaciadora pasan de slide; los puntitos de la derecha saltan directo.
