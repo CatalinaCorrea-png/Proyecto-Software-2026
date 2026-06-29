@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import axios from 'axios'
+import { apiAxios } from '../api'
 import type { ImageMeta, ImageListResponse } from '../types'
 
 import { API_URL as API } from '../config'
@@ -28,7 +28,7 @@ export function useImageGallery() {
       params.set('page', String(filters.page ?? 1))
       params.set('page_size', String(filters.page_size ?? 20))
 
-      const { data } = await axios.get<ImageListResponse>(`${API}/api/images?${params}`)
+      const { data } = await apiAxios.get<ImageListResponse>(`/api/images?${params}`)
       setImages(data.items)
       setTotal(data.total)
     } catch {

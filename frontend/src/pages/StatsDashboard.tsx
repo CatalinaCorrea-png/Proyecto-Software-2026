@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { API_URL } from '../config'
+import { apiFetch } from '../api'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, Legend, ScatterChart, Scatter, ZAxis,
@@ -149,10 +150,10 @@ export function StatsDashboard() {
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    fetch(`${API_URL}/api/stats/overview`)
+    apiFetch(`${API_URL}/api/stats/overview`)
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
       .then(setData)
-      .catch(e => setError(e.message))
+      .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
 

@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { API_URL, WS_URL } from './config'
+import { apiFetch } from './api'
+import { useAuth } from './contexts/AuthContext'
+import { LoginPage } from './pages/LoginPage'
 import { MissionSetup } from './pages/MissionSetup'
 import { Dashboard } from './pages/Dashboard'
 import { MissionsHistory } from './pages/MissionsHistory'
@@ -11,6 +14,18 @@ import type { Detection } from './types'
 import './App.css'
 
 type View = 'setup' | 'dashboard' | 'history' | 'gallery' | 'stats'
+
+const ADMIN_NAV: { key: View; label: string }[] = [
+  { key: 'setup',     label: 'Nueva Misión' },
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'history',   label: 'Historial' },
+  { key: 'gallery',   label: 'Galería' },
+  { key: 'stats',     label: 'Estadísticas' },
+]
+
+const USER_NAV: { key: View; label: string }[] = [
+  { key: 'dashboard', label: 'Dashboard' },
+]
 
 function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -64,26 +79,39 @@ function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
 }
 
 function App() {
+  const { user, logout } = useAuth()
+
+  // Show login page if not authenticated
+  if (!user) return <LoginPage />
+
+  return <AppShell />
+}
+
+function AppShell() {
+  const { user, logout } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
+
   const hasMission = sessionStorage.getItem('missionActive') === '1'
-  const [view, setView] = useState<View>(hasMission ? 'dashboard' : 'setup')
+  const initialView: View = isAdmin ? (hasMission ? 'dashboard' : 'setup') : 'dashboard'
+  const [view, setView] = useState<View>(initialView)
   const [missionStarted, setMissionStarted] = useState(hasMission)
   const [showConfirm, setShowConfirm] = useState(false)
 
   useEffect(() => {
     if (!hasMission) return
-    fetch(`${API_URL}/mission/active`)
+    apiFetch(`${API_URL}/mission/active`)
       .then(r => r.json())
-      .then(data => {
+      .then((data: { active: boolean }) => {
         if (!data.active) {
           sessionStorage.removeItem('missionActive')
           setMissionStarted(false)
-          setView('setup')
+          setView(isAdmin ? 'setup' : 'dashboard')
         }
       })
       .catch(() => {
         sessionStorage.removeItem('missionActive')
         setMissionStarted(false)
-        setView('setup')
+        setView(isAdmin ? 'setup' : 'dashboard')
       })
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -110,7 +138,7 @@ function App() {
   const handleNewMission = useCallback(async () => {
     if (missionStarted) {
       try {
-        await fetch(`${API_URL}/mission/stop`, { method: 'POST' })
+        await apiFetch(`${API_URL}/mission/stop`, { method: 'POST' })
       } catch { /* backend down */ }
     }
     setMissionStarted(false)
@@ -123,7 +151,7 @@ function App() {
 
   const handleStopMission = useCallback(async () => {
     try {
-      await fetch(`${API_URL}/mission/stop`, { method: 'POST' })
+      await apiFetch(`${API_URL}/mission/stop`, { method: 'POST' })
     } catch { /* backend down */ }
     setMissionStarted(false)
     sessionStorage.removeItem('missionActive')
@@ -138,17 +166,12 @@ function App() {
   }, [])
 
   const handleNavClick = (key: View) => {
-    if (key === 'dashboard' && !missionStarted) return
+    if (!isAdmin && key !== 'dashboard') return
+    if (key === 'dashboard' && !missionStarted && isAdmin) return
     setView(key)
   }
 
-  const navItems: { key: View; label: string }[] = [
-    { key: 'setup', label: 'Nueva Misión' },
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'history', label: 'Historial' },
-    { key: 'gallery', label: 'Galería' },
-    { key: 'stats', label: 'Estadísticas' },
-  ]
+  const navItems = isAdmin ? ADMIN_NAV : USER_NAV
 
   return (
     <div className="app">
@@ -161,12 +184,12 @@ function App() {
       <nav className="app-nav">
         <span className="app-nav__brand">AeroSearch AI</span>
         {navItems.map(({ key, label }) => {
-          const disabled = key === 'dashboard' && !missionStarted
+          const disabled = isAdmin && key === 'dashboard' && !missionStarted
           return (
             <button
               key={key}
               onClick={() => {
-                if (key === 'setup' && missionStarted) {
+                if (isAdmin && key === 'setup' && missionStarted) {
                   setShowConfirm(true)
                 } else {
                   handleNavClick(key)
@@ -179,7 +202,7 @@ function App() {
             </button>
           )
         })}
-        {missionStarted && (
+        {isAdmin && missionStarted && (
           <button
             onClick={handleStopMission}
             className="app-nav__btn app-nav__btn--stop"
@@ -187,10 +210,17 @@ function App() {
             Finalizar Misión
           </button>
         )}
+        <div className="app-nav__user">
+          <span className="app-nav__username">{user?.username}</span>
+          <span className="app-nav__role">{user?.role}</span>
+          <button onClick={logout} className="app-nav__logout">
+            Salir
+          </button>
+        </div>
       </nav>
 
       <div className="app-content">
-        {view === 'setup' && (
+        {isAdmin && view === 'setup' && (
           <MissionSetup onStart={handleMissionStart} />
         )}
         <div className={`app-view${view !== 'dashboard' ? ' app-view--hidden' : ''}`}>
@@ -204,15 +234,24 @@ function App() {
             onNewDetection={handleNewDetection}
           />
         </div>
-        {view === 'history' && <MissionsHistory onViewGallery={handleViewGallery} />}
-        {view === 'gallery' && (
+        {isAdmin && view === 'history' && <MissionsHistory onViewGallery={handleViewGallery} />}
+        {isAdmin && view === 'gallery' && (
           <div className="app-view app-content--scrollable">
             <GalleryPage initialMissionFilter={galleryMissionFilter} />
           </div>
         )}
-        {view === 'stats' && (
+        {isAdmin && view === 'stats' && (
           <div className="app-view app-content--scrollable">
             <StatsDashboard />
+          </div>
+        )}
+        {!isAdmin && view !== 'dashboard' && (
+          <div className="access-denied">
+            <div className="access-denied__icon">⛔</div>
+            <div className="access-denied__title">Acceso Denegado</div>
+            <div className="access-denied__msg">
+              Tu rol <strong>USER</strong> solo tiene acceso al Dashboard.
+            </div>
           </div>
         )}
       </div>

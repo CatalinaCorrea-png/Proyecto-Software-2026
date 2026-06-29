@@ -1,8 +1,11 @@
 import asyncio
 import os
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
 from modules.drone.simulator import get_current_telemetry
 from modules.detection.yolo_detector import YoloDetector, CONFIDENCE_THRESHOLD
 from modules.detection.thermal_detector import ThermalDetector
@@ -15,21 +18,20 @@ from core.config import DRONE_IP, DRONE_UDP_PORT, DRONE_UDP_TX_PORT
 from core.config import CAMERA_SOURCE, CAMERA_INDEX, VIDEO_SOURCE
 from modules.drone.camera import open_camera
 from modules.drone.udp_telemetry import start_udp_listener, hw_watchdog
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import DRONE_UDP_TX_PORT
-from db.database import init_db
+from db.database import init_db, seed_db
 from db.mission_ops import close_orphan_missions
 from db.mongodb import connect as mongo_connect, disconnect as mongo_disconnect
 from modules.drone.frame_grabber import stop_grabber
 from modules.drone.udp_telemetry import hw_watchdog, start_udp_listener
 from routers import images, missions_mongo, stats
 from routers import drone, missions_sql, websockets
+from auth.router import router as auth_router
+from auth.dependencies import get_current_user, require_admin
 
 init_db()
+seed_db()
 close_orphan_missions()
 
 yolo = YoloDetector()
@@ -56,14 +58,11 @@ def _print_startup_banner():
 async def lifespan(app: FastAPI):
     await mongo_connect()
     _print_startup_banner()
-    # Se guarda el transport para cerrarlo en el shutdown.
-    # Sin esto, el socket UDP quedaba ocupado al reiniciar y el puerto
-    # lanzaba WinError 10048 en el siguiente arranque.
     udp_transport = await start_udp_listener(DRONE_UDP_TX_PORT)
     asyncio.create_task(hw_watchdog())
     asyncio.create_task(drone.keepalive_loop())
     yield
-    udp_transport.close()  # libera el puerto UDP al cerrar
+    udp_transport.close()
     stop_grabber()
     try:
         await mongo_disconnect()
@@ -79,12 +78,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(drone.router)
+# Public routes
+app.include_router(auth_router)
+
+# Admin-only routers
+app.include_router(drone.router,          dependencies=[Depends(require_admin)])
+app.include_router(images.router,         dependencies=[Depends(require_admin)])
+app.include_router(missions_mongo.router, dependencies=[Depends(require_admin)])
+app.include_router(stats.router,          dependencies=[Depends(require_admin)])
+
+# Per-endpoint auth handled inside the router itself
 app.include_router(missions_sql.router)
+
+# WebSocket routes — auth not feasible via headers; frontend enforces role access
 app.include_router(websockets.router)
-app.include_router(images.router)
-app.include_router(missions_mongo.router)
-app.include_router(stats.router)
 
 
 @app.get("/")

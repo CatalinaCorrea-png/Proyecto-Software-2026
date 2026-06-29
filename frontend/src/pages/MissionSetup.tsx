@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { API_URL as API } from '../config'
+import { apiFetch } from '../api'
 
 interface MissionConfig {
   name: string
@@ -46,7 +47,7 @@ export function MissionSetup({ onStart }: Props) {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API}/mission/setup`, {
+      const res = await apiFetch(`${API}/mission/setup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),

@@ -1,10 +1,11 @@
 import asyncio
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 import core.mission_state as ms
+from auth.dependencies import get_current_user, require_admin
 from core.state import drone_state, reset_mission
 from db.database import SessionLocal
 from db.mission_ops import close_mission_db
@@ -45,12 +46,12 @@ def _mission_to_dict(m: MissionModel) -> dict:
     }
 
 
-@router.get("/mission/active")
+@router.get("/mission/active", dependencies=[Depends(get_current_user)])
 def mission_active():
     return {"active": ms.mission_configured and drone_state.mission_active}
 
 
-@router.post("/mission/stop")
+@router.post("/mission/stop", dependencies=[Depends(require_admin)])
 async def mission_stop():
     if not drone_state.mission_active and (ms.simulation_task is None or ms.simulation_task.done()):
         raise HTTPException(status_code=400, detail="No hay misión activa")
@@ -66,7 +67,7 @@ async def mission_stop():
     return {"status": "stopped"}
 
 
-@router.post("/mission/setup")
+@router.post("/mission/setup", dependencies=[Depends(require_admin)])
 async def mission_setup(req: MissionSetupRequest):
     ms.mission_name = req.name
     ms.mission_altitude = req.altitude
@@ -99,7 +100,7 @@ async def mission_setup(req: MissionSetupRequest):
     }
 
 
-@router.get("/missions")
+@router.get("/missions", dependencies=[Depends(require_admin)])
 def list_missions():
     db = SessionLocal()
     try:
@@ -109,7 +110,7 @@ def list_missions():
         db.close()
 
 
-@router.delete("/missions/{mission_id}", status_code=204)
+@router.delete("/missions/{mission_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_mission(mission_id: int):
     db = SessionLocal()
     try:
@@ -125,7 +126,7 @@ async def delete_mission(mission_id: int):
     await delete_images_by_mission(str(mission_id))
 
 
-@router.get("/missions/{mission_id}")
+@router.get("/missions/{mission_id}", dependencies=[Depends(require_admin)])
 def get_mission(mission_id: int):
     db = SessionLocal()
     try:

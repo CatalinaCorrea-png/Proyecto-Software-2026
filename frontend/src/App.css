@@ -79,3 +79,207 @@
 .app-view--hidden {
   display: none;
 }
+
+/* ── User info + logout in nav ── */
+.app-nav__user {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-nav__username {
+  font-family: monospace;
+  font-size: 12px;
+  color: #90A4AE;
+}
+
+.app-nav__role {
+  font-family: monospace;
+  font-size: 10px;
+  color: #FF6D00;
+  background: rgba(255, 109, 0, 0.1);
+  border: 1px solid rgba(255, 109, 0, 0.3);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+.app-nav__logout {
+  background: transparent;
+  border: 1px solid #37474F;
+  border-radius: 4px;
+  color: #78909C;
+  font-family: monospace;
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.app-nav__logout:hover {
+  color: #FF5252;
+  border-color: #FF5252;
+}
+
+/* ── Login page ── */
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #0A0E1A;
+}
+
+.login-card {
+  background: #0D1B2A;
+  border: 1px solid #1E3A5F;
+  border-radius: 10px;
+  padding: 36px 40px;
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-brand {
+  font-family: monospace;
+  font-size: 22px;
+  font-weight: bold;
+  color: #FF6D00;
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+.login-subtitle {
+  font-family: monospace;
+  font-size: 11px;
+  color: #546E7A;
+  text-align: center;
+  margin: 0 0 20px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-field label {
+  font-family: monospace;
+  font-size: 10px;
+  color: #78909C;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.login-field input {
+  background: #0A1628;
+  border: 1px solid #1E3A5F;
+  border-radius: 4px;
+  color: #E0E0E0;
+  font-family: monospace;
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.login-field input:focus {
+  border-color: #FF6D00;
+}
+
+.login-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-password-wrapper input {
+  width: 100%;
+  padding-right: 38px;
+}
+
+.login-eye {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.login-eye:hover {
+  opacity: 1;
+}
+
+.login-error {
+  font-family: monospace;
+  font-size: 12px;
+  color: #FF5252;
+  text-align: center;
+  padding: 8px;
+  background: rgba(255, 82, 82, 0.08);
+  border: 1px solid rgba(255, 82, 82, 0.2);
+  border-radius: 4px;
+}
+
+.login-btn {
+  background: #FF6D00;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 0;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 4px;
+}
+
+.login-btn:hover:not(:disabled) {
+  background: #E65100;
+}
+
+.login-btn:disabled {
+  background: #37474F;
+  cursor: wait;
+}
+
+/* ── Access denied ── */
+.access-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: #546E7A;
+  font-family: monospace;
+}
+
+.access-denied__icon {
+  font-size: 40px;
+}
+
+.access-denied__title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #FF5252;
+}
+
+.access-denied__msg {
+  font-size: 13px;
+  color: #78909C;
+}

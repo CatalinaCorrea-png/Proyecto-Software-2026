@@ -24,6 +24,7 @@
 - [Requisitos previos](#-requisitos-previos)
 - [Instalación](#-instalación)
 - [Variables de entorno](#-variables-de-entorno)
+- [Credenciales de acceso](#-credenciales-de-acceso)
 - [Levantar la aplicación](#-levantar-la-aplicación)
 - [Levantar con Docker](#-levantar-con-docker)
 - [Tests](#-tests)
@@ -142,6 +143,8 @@ cp frontend/.env.example frontend/.env
 | `DRONE_UDP_PORT` | `4210` | Puerto UDP de recepción |
 | `DRONE_UDP_TX_PORT` | `4211` | Puerto UDP de telemetría |
 | `VIDEO_SOURCE` | `media/videos/video6.mp4` | Archivo de video local (solo si `CAMERA_SOURCE=video`) |
+| `JWT_SECRET_KEY` | *(valor interno)* | Clave secreta para firmar tokens JWT — **cambiar en producción** |
+| `JWT_EXPIRE_MINUTES` | `480` | Duración del token en minutos (8 horas por defecto) |
 
 ### Frontend (`frontend/.env`)
 
@@ -151,6 +154,20 @@ cp frontend/.env.example frontend/.env
 | `VITE_WS_URL` | `ws://localhost:8000` | URL base del backend (WebSocket) |
 
 > En Docker las URLs del frontend no necesitan cambiarse — el browser siempre accede al backend en `localhost:8000`.
+
+---
+
+## 🔐 Credenciales de acceso
+
+Al iniciar el backend por primera vez se crean automáticamente dos usuarios:
+
+| Rol | Usuario | Contraseña | Acceso |
+|---|---|---|---|
+| **ADMIN** | `admin` | `admin123` | Acceso completo (misiones, historial, galería, estadísticas) |
+| **USER** | `user` | `user123` | Solo Dashboard (visualización en tiempo real) |
+
+> Las contraseñas se almacenan hasheadas con **bcrypt** en la base de datos.  
+> Para producción, cambiá `JWT_SECRET_KEY` en `backend/.env`.
 
 ---
 
