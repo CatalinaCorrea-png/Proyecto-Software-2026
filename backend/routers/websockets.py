@@ -3,7 +3,7 @@ import base64
 import json
 import time
 import uuid
-from datetime import datetime, datetime as _dt, timezone
+from datetime import datetime, timezone
 
 import cv2
 import numpy as np
@@ -272,7 +272,7 @@ async def _persist_image(frame, conf_label: str, det, all_dets, mission_id: int)
             lat=lat,
             lng=lng,
             altitude_m=alt,
-            timestamp=_dt.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             view_mode="rgb",
             camera_source=CAMERA_SOURCE,
             detections=[det_payload],
