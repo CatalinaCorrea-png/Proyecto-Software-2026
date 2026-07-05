@@ -23,9 +23,13 @@ const ADMIN_NAV: { key: View; label: string }[] = [
   { key: 'stats',     label: 'Estadísticas' },
 ]
 
-const USER_NAV: { key: View; label: string }[] = [
+// Invitado / solo lectura: misión en vivo + galería guardada.
+const VIEWER_NAV: { key: View; label: string }[] = [
   { key: 'dashboard', label: 'Dashboard' },
+  { key: 'gallery',   label: 'Galería' },
 ]
+
+const VIEWER_VIEWS: View[] = VIEWER_NAV.map(n => n.key)
 
 function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -79,7 +83,7 @@ function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
 }
 
 function App() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
 
   // Show login page if not authenticated
   if (!user) return <LoginPage />
@@ -97,12 +101,18 @@ function AppShell() {
   const [missionStarted, setMissionStarted] = useState(hasMission)
   const [showConfirm, setShowConfirm] = useState(false)
 
+  // La verdad de si hay misión en curso está en el server, no en sessionStorage
+  // (que es por-ventana: un espectador en otra ventana no tiene el flag). Consultamos
+  // siempre para que cualquier ventana/rol descubra la misión activa y conecte la telemetría.
   useEffect(() => {
-    if (!hasMission) return
     apiFetch(`${API_URL}/mission/active`)
       .then(r => r.json())
       .then((data: { active: boolean }) => {
-        if (!data.active) {
+        if (data.active) {
+          sessionStorage.setItem('missionActive', '1')
+          setMissionStarted(true)
+          if (!isAdmin) setView('dashboard')
+        } else {
           sessionStorage.removeItem('missionActive')
           setMissionStarted(false)
           setView(isAdmin ? 'setup' : 'dashboard')
@@ -166,12 +176,12 @@ function AppShell() {
   }, [])
 
   const handleNavClick = (key: View) => {
-    if (!isAdmin && key !== 'dashboard') return
+    if (!isAdmin && !VIEWER_VIEWS.includes(key)) return
     if (key === 'dashboard' && !missionStarted && isAdmin) return
     setView(key)
   }
 
-  const navItems = isAdmin ? ADMIN_NAV : USER_NAV
+  const navItems = isAdmin ? ADMIN_NAV : VIEWER_NAV
 
   return (
     <div className="app">
@@ -202,20 +212,26 @@ function AppShell() {
             </button>
           )
         })}
-        {isAdmin && missionStarted && (
-          <button
-            onClick={handleStopMission}
-            className="app-nav__btn app-nav__btn--stop"
-          >
-            Finalizar Misión
-          </button>
-        )}
-        <div className="app-nav__user">
-          <span className="app-nav__username">{user?.username}</span>
-          <span className="app-nav__role">{user?.role}</span>
-          <button onClick={logout} className="app-nav__logout">
-            Salir
-          </button>
+        <div className="app-nav__actions">
+          {isAdmin && missionStarted && (
+            <>
+              <button
+                onClick={handleStopMission}
+                className="app-nav__btn--stop"
+                title="Finaliza la misión en curso y guarda sus datos"
+              >
+                <span aria-hidden="true">⏹</span> Finalizar Misión
+              </button>
+              <span className="app-nav__divider" aria-hidden="true" />
+            </>
+          )}
+          <div className="app-nav__user">
+            <span className="app-nav__username">{user?.username}</span>
+            <span className="app-nav__role">{user?.role === 'GUEST' ? 'INVITADO' : user?.role}</span>
+            <button onClick={logout} className="app-nav__logout">
+              Salir
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -235,7 +251,7 @@ function AppShell() {
           />
         </div>
         {isAdmin && view === 'history' && <MissionsHistory onViewGallery={handleViewGallery} />}
-        {isAdmin && view === 'gallery' && (
+        {view === 'gallery' && (
           <div className="app-view app-content--scrollable">
             <GalleryPage initialMissionFilter={galleryMissionFilter} />
           </div>
@@ -245,12 +261,12 @@ function AppShell() {
             <StatsDashboard />
           </div>
         )}
-        {!isAdmin && view !== 'dashboard' && (
+        {!isAdmin && !VIEWER_VIEWS.includes(view) && (
           <div className="access-denied">
             <div className="access-denied__icon">⛔</div>
             <div className="access-denied__title">Acceso Denegado</div>
             <div className="access-denied__msg">
-              Tu rol <strong>USER</strong> solo tiene acceso al Dashboard.
+              El modo <strong>invitado</strong> solo tiene acceso al Dashboard y la Galería.
             </div>
           </div>
         )}

@@ -13,6 +13,7 @@ import json
 
 import core.detectors as detectors
 import core.mission_state as ms
+from core.state import drone_state
 from db.database import SessionLocal
 from db.models import Mission
 
@@ -90,6 +91,9 @@ def test_deteccion_se_persiste_en_sqlite(client, auth_headers):
     finally:
         db.close()
     ms.active_mission_id = mission_id
+    # La inferencia ahora la corre un productor unico que vive `while mission_active`.
+    # Marcamos la mision activa para que arranque al conectarse el consumidor.
+    drone_state.mission_active = True
 
     # 3. Forzar que el detector RGB "vea" una persona, sin depender de la imagen
     detectors.yolo.next_detections = [
@@ -101,7 +105,7 @@ def test_deteccion_se_persiste_en_sqlite(client, auth_headers):
         }
     ]
 
-    # 4. Abrir el WS de deteccion y leer hasta recibir una alerta "detection"
+    # 4. Abrir el WS de deteccion (consumidor) y leer hasta recibir una alerta "detection"
     got_detection = False
     with client.websocket_connect("/ws/detection") as ws:
         for _ in range(40):
@@ -109,6 +113,8 @@ def test_deteccion_se_persiste_en_sqlite(client, auth_headers):
             if msg["type"] == "detection":
                 got_detection = True
                 break
+    # Frenar el productor antes de verificar la persistencia.
+    drone_state.mission_active = False
     assert got_detection, "no se recibio ninguna alerta de deteccion"
 
     # 5. La deteccion quedo persistida en SQLite, asociada a la mision

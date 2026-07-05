@@ -1,11 +1,12 @@
 import asyncio
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 import core.mission_state as ms
-from auth.dependencies import get_current_user, require_admin
+from auth.dependencies import require_admin
 from core.state import drone_state, reset_mission
 from db.database import SessionLocal
 from db.mission_ops import close_mission_db
@@ -46,7 +47,8 @@ def _mission_to_dict(m: MissionModel) -> dict:
     }
 
 
-@router.get("/mission/active", dependencies=[Depends(get_current_user)])
+# Público: el estado de misión activa lo consulta también el modo invitado (solo lectura).
+@router.get("/mission/active")
 def mission_active():
     return {"active": ms.mission_configured and drone_state.mission_active}
 
@@ -61,6 +63,11 @@ async def mission_stop():
             await asyncio.wait_for(ms.simulation_task, timeout=3.0)
         except (asyncio.TimeoutError, Exception):
             ms.simulation_task.cancel()
+    if ms.detection_task and not ms.detection_task.done():
+        try:
+            await asyncio.wait_for(ms.detection_task, timeout=3.0)
+        except (asyncio.TimeoutError, Exception):
+            ms.detection_task.cancel()
     close_mission_db()
     ms.mission_configured = False
     drone_state.status = "idle"
@@ -78,6 +85,12 @@ async def mission_setup(req: MissionSetupRequest):
             await asyncio.wait_for(ms.simulation_task, timeout=3.0)
         except (asyncio.TimeoutError, Exception):
             ms.simulation_task.cancel()
+    if ms.detection_task and not ms.detection_task.done():
+        drone_state.mission_active = False
+        try:
+            await asyncio.wait_for(ms.detection_task, timeout=3.0)
+        except (asyncio.TimeoutError, Exception):
+            ms.detection_task.cancel()
     close_mission_db()
     ms.mission_configured = True
 
@@ -87,6 +100,21 @@ async def mission_setup(req: MissionSetupRequest):
         cell_size_m=req.cell_size_m,
     )
     ms.detection_history.clear()
+
+    # Avisar a los clientes de grilla ya conectados (admin + invitados) que la grilla
+    # se reinició, para que no queden celdas marcadas de la misión anterior hasta el refresh.
+    if ms.grid_clients:
+        grid_init = json.dumps({
+            "type": "grid_init",
+            "cells": grid.get_all_cells(),
+            "coverage": grid.coverage_percent(),
+        })
+        for client in ms.grid_clients.copy():
+            try:
+                await client.send_text(grid_init)
+            except Exception:
+                ms.grid_clients.remove(client)
+
     return {
         "status": "ready",
         "name": req.name,

@@ -83,9 +83,12 @@ app.include_router(auth_router)
 
 # Admin-only routers
 app.include_router(drone.router,          dependencies=[Depends(require_admin)])
-app.include_router(images.router,         dependencies=[Depends(require_admin)])
 app.include_router(missions_mongo.router, dependencies=[Depends(require_admin)])
 app.include_router(stats.router,          dependencies=[Depends(require_admin)])
+
+# Imágenes: lectura pública (el modo invitado ve la galería en vivo y guardada).
+# La escritura (POST /upload) queda protegida con require_admin dentro del router.
+app.include_router(images.router)
 
 # Per-endpoint auth handled inside the router itself
 app.include_router(missions_sql.router)

@@ -134,6 +134,10 @@ function ImageCard({ image, onSelect }: { image: ImageMeta; onSelect: (img: Imag
             <span style={{display: 'flex', fontSize: 14, padding: 0, color: C.muted, paddingLeft: 4}}>MODO</span>
             <span style={{ fontSize: 12, color: C.text, paddingLeft: 4 }}>{image.view_mode.toUpperCase()}</span>
           </div>
+          <div>
+            <span style={{display: 'flex', fontSize: 14, padding: 0, color: C.muted, paddingLeft: 4}}>MISIÓN</span>
+            <span style={{ fontSize: 12, color: C.orange, paddingLeft: 4 }}>#{image.mission_id}</span>
+          </div>
         </div>
       </div>
     </div>

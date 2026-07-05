@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 
-export type Role = 'ADMIN' | 'USER'
+export type Role = 'ADMIN' | 'USER' | 'GUEST'
 
 export interface UserInfo {
   username: string
@@ -11,6 +11,7 @@ interface AuthContextValue {
   user: UserInfo | null
   token: string | null
   login: (username: string, role: string, token: string) => void
+  loginAsGuest: () => void
   logout: () => void
 }
 
@@ -38,6 +39,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(info)
   }, [])
 
+  // Modo invitado: entra sin credenciales ni token. Solo lectura.
+  // Persistimos el usuario (no hay token) para que sobreviva un refresh.
+  const loginAsGuest = useCallback(() => {
+    const info: UserInfo = { username: 'Invitado', role: 'GUEST' }
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.setItem(USER_KEY, JSON.stringify(info))
+    setToken(null)
+    setUser(info)
+  }, [])
+
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
@@ -46,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, loginAsGuest, logout }}>
       {children}
     </AuthContext.Provider>
   )

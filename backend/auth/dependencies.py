@@ -39,10 +39,23 @@ def get_current_user(
     return user
 
 
-def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role.name != "ADMIN":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Se requiere rol ADMIN",
-        )
-    return current_user
+# Jerarquía de roles: cada rol incluye los permisos de los inferiores.
+# El operador (ADMIN) también es espectador (GUEST/USER), por eso comparamos
+# por rango y no por igualdad exacta.
+ROLE_RANK = {"GUEST": 0, "USER": 1, "ADMIN": 2}
+
+
+def require_role(minimo: str):
+    def checker(current_user: User = Depends(get_current_user)) -> User:
+        if ROLE_RANK.get(current_user.role.name, -1) < ROLE_RANK[minimo]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Se requiere rol {minimo} o superior",
+            )
+        return current_user
+
+    return checker
+
+
+# Alias retrocompatible: las rutas de control siguen usando require_admin.
+require_admin = require_role("ADMIN")

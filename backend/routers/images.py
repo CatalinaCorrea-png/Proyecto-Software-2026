@@ -1,11 +1,12 @@
 import json
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query, Depends
 from fastapi.responses import Response
 from bson import ObjectId
 
 import db.mongodb as _mongo
+from auth.dependencies import require_admin
 from modules.storage.image_service import save_image, get_full_image
 from modules.storage.schemas import (
     ImageUploadRequest, DetectionPayload, ImageResponse, ImageListResponse,
@@ -37,7 +38,7 @@ def _doc_to_response(doc: dict) -> ImageResponse:
     )
 
 
-@router.post("/upload", response_model=ImageResponse)
+@router.post("/upload", response_model=ImageResponse, dependencies=[Depends(require_admin)])
 async def upload_image(
     file: UploadFile = File(...),
     mission_id: str = Form(...),

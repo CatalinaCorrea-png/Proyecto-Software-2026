@@ -48,14 +48,29 @@
   cursor: not-allowed;
 }
 
+/* Acción destructiva: agrupada a la derecha con las acciones de sesión,
+   con forma de botón (no de tab) para dejar clara su naturaleza. */
 .app-nav__btn--stop {
-  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 82, 82, 0.08);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  border-radius: 4px;
   color: #FF5252;
+  font-family: monospace;
   font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .app-nav__btn--stop:hover {
-  color: #FF8A80;
+  background: #FF5252;
+  border-color: #FF5252;
+  color: #fff;
 }
 
 .app-content {
@@ -80,9 +95,22 @@
   display: none;
 }
 
+/* ── Acciones de la derecha (finalizar misión + usuario) ── */
+.app-nav__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-nav__divider {
+  width: 1px;
+  height: 20px;
+  background: #1E2D3D;
+}
+
 /* ── User info + logout in nav ── */
 .app-nav__user {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -255,6 +283,42 @@
 .login-btn:disabled {
   background: #37474F;
   cursor: wait;
+}
+
+/* ── Acceso invitado (solo lectura) ── */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 6px;
+  color: #455A64;
+  font-family: monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.login-guest-btn {
+  width: 100%;
+  background: transparent;
+  color: #90A4AE;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 10px 0;
+  font-family: monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.login-guest-btn:hover {
+  border-color: #FF6D00;
+  color: #FF6D00;
 }
 
 /* ── Access denied ── */

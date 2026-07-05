@@ -67,6 +67,51 @@ def test_token_con_firma_invalida_es_rechazado():
         decode_token(token + "x")
 
 
+# ─── 1b. Jerarquia de roles (require_role) ───────────────────────────────────
+# El modelo es acumulativo: el operador (ADMIN) tambien es espectador, asi que
+# comparamos por rango y NO por igualdad exacta. Estos tests fijan esa semantica
+# para que nadie vuelva a un check de igualdad (que dejaria al operador afuera de
+# una ruta de espectador).
+from types import SimpleNamespace
+
+from fastapi import HTTPException
+
+from auth.dependencies import require_role
+
+
+def _fake_user(role_name: str):
+    return SimpleNamespace(role=SimpleNamespace(name=role_name))
+
+
+# Un rol superior hereda los permisos de uno inferior: ADMIN pasa un gate de USER
+def test_operador_hereda_permiso_de_espectador():
+    admin = _fake_user("ADMIN")
+    guard = require_role("USER")
+    assert guard(current_user=admin) is admin
+
+
+# El mismo rol exacto tambien pasa su propio gate
+def test_rol_exacto_pasa_su_propio_gate():
+    user = _fake_user("USER")
+    assert require_role("USER")(current_user=user) is user
+
+
+# Un rol inferior NO alcanza un gate superior: GUEST no pasa un gate de USER
+def test_espectador_no_alcanza_permiso_superior():
+    guest = _fake_user("GUEST")
+    with pytest.raises(HTTPException) as exc:
+        require_role("USER")(current_user=guest)
+    assert exc.value.status_code == 403
+
+
+# Un rol desconocido queda por debajo de todo y es rechazado
+def test_rol_desconocido_es_rechazado():
+    raro = _fake_user("SUPERUSER_INEXISTENTE")
+    with pytest.raises(HTTPException) as exc:
+        require_role("GUEST")(current_user=raro)
+    assert exc.value.status_code == 403
+
+
 # ─── 2. Endpoint /auth/login aislado ─────────────────────────────────────────
 
 @pytest.fixture

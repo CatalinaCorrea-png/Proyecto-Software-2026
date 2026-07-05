@@ -3,7 +3,7 @@ import { API_URL } from '../config'
 import { useAuth } from '../contexts/AuthContext'
 
 export function LoginPage() {
-  const { login } = useAuth()
+  const { login, loginAsGuest } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -91,6 +91,11 @@ export function LoginPage() {
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
+
+        <div className="login-divider">solo lectura</div>
+        <button type="button" className="login-guest-btn" onClick={loginAsGuest}>
+          Entrar como invitado
+        </button>
       </div>
     </div>
   )
