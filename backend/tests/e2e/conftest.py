@@ -125,6 +125,7 @@ def _reset_state():
         state.drone_state.mission_active = False
         ms.grid_clients.clear()
         ms.detection_clients.clear()
+        ms.mission_clients.clear()
         ms.detection_history.clear()
         ms.active_mission_id = None
         ms.simulation_task = None

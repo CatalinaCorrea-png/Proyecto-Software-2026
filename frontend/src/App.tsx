@@ -1,13 +1,14 @@
 import { useState, useCallback, useEffect } from 'react'
 import { API_URL, WS_URL } from './config'
 import { apiFetch } from './api'
-import { useAuth } from './contexts/AuthContext'
+import { useAuth, buildGuestLink } from './contexts/AuthContext'
 import { LoginPage } from './pages/LoginPage'
 import { MissionSetup } from './pages/MissionSetup'
 import { Dashboard } from './pages/Dashboard'
 import { MissionsHistory } from './pages/MissionsHistory'
 import GalleryPage from './pages/GalleryPage'
 import { StatsDashboard } from './pages/StatsDashboard'
+import { MissionFinishedModal } from './components/MissionFinishedModal'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useMission } from './hooks/useMission'
 import type { Detection } from './types'
@@ -82,6 +83,35 @@ function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
   )
 }
 
+// Botón del Administrador para generar/copiar el enlace de acceso en modo
+// lectura (Feature: enlace compartible). El enlace entra directo como
+// invitado (GUEST), sin token ni panel administrativo — ver AuthContext.
+function GuestLinkButton() {
+  const [copied, setCopied] = useState(false)
+
+  const handleClick = async () => {
+    const link = buildGuestLink()
+    try {
+      await navigator.clipboard.writeText(link)
+    } catch {
+      // Clipboard bloqueado (permisos/HTTP no seguro): fallback visible para copiar a mano.
+      window.prompt('Copiá el enlace de acceso en modo lectura:', link)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className="app-nav__btn--share"
+      title="Genera un enlace de acceso de solo lectura para compartir"
+    >
+      <span aria-hidden="true">{copied ? '✓' : '🔗'}</span> {copied ? 'Enlace copiado' : 'Compartir enlace'}
+    </button>
+  )
+}
+
 function App() {
   const { user } = useAuth()
 
@@ -100,6 +130,7 @@ function AppShell() {
   const [view, setView] = useState<View>(initialView)
   const [missionStarted, setMissionStarted] = useState(hasMission)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [missionFinished, setMissionFinished] = useState(false)
 
   // La verdad de si hay misión en curso está en el server, no en sessionStorage
   // (que es por-ventana: un espectador en otra ventana no tiene el flag). Consultamos
@@ -130,6 +161,17 @@ function AppShell() {
   const { telemetry, trail } = useMission(lastMessage)
   const [mapDetections, setMapDetections] = useState<Detection[]>([])
   const [detectionCount, setDetectionCount] = useState(0)
+
+  // Invitados y usuarios en modo lectura: al finalizar la misión, cortamos la
+  // conexión en tiempo real (missionStarted=false cierra el WS) y avisamos con
+  // el modal. El admin ya sabe que la finalizó (la acción fue suya).
+  useEffect(() => {
+    if (lastMessage?.type === 'mission_finished' && !isAdmin) {
+      setMissionFinished(true)
+      setMissionStarted(false)
+      sessionStorage.removeItem('missionActive')
+    }
+  }, [lastMessage, isAdmin])
 
   const handleNewDetection = useCallback((detection: Detection) => {
     if (detection.confidence === 'low') return
@@ -191,6 +233,9 @@ function AppShell() {
           onCancel={() => setShowConfirm(false)}
         />
       )}
+      {missionFinished && (
+        <MissionFinishedModal onClose={() => setMissionFinished(false)} />
+      )}
       <nav className="app-nav">
         <span className="app-nav__brand">AeroSearch AI</span>
         {navItems.map(({ key, label }) => {
@@ -213,6 +258,12 @@ function AppShell() {
           )
         })}
         <div className="app-nav__actions">
+          {isAdmin && (
+            <>
+              <GuestLinkButton />
+              <span className="app-nav__divider" aria-hidden="true" />
+            </>
+          )}
           {isAdmin && missionStarted && (
             <>
               <button

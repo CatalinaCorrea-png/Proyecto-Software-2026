@@ -32,6 +32,7 @@ _DETECTION_COOLDOWN = 3.0
 async def mission_websocket(websocket: WebSocket):
     await websocket.accept()
     print("🔌 Misión conectada")
+    ms.mission_clients.append(websocket)
 
     if ms.mission_configured and (ms.simulation_task is None or ms.simulation_task.done()):
         drone_state.mission_start = time.time()
@@ -75,6 +76,11 @@ async def mission_websocket(websocket: WebSocket):
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         print("❌ Misión desconectada (simulación sigue corriendo)")
+    finally:
+        try:
+            ms.mission_clients.remove(websocket)
+        except ValueError:
+            pass
 
 
 @router.websocket("/ws/grid")
@@ -93,16 +99,9 @@ async def grid_websocket(websocket: WebSocket):
         ms.grid_clients.remove(websocket)
 
 
-async def _broadcast(clients: list, message: str) -> None:
-    """Envía un mensaje a todos los clientes, descartando los que ya se cayeron."""
-    for client in clients.copy():
-        try:
-            await client.send_text(message)
-        except Exception:
-            try:
-                clients.remove(client)
-            except ValueError:
-                pass
+# Alias: el helper vive en core.mission_state para que otros routers
+# (p. ej. missions_sql.mission_stop) puedan reusarlo sin importar este módulo.
+_broadcast = ms.broadcast
 
 
 async def run_detection_producer() -> None:

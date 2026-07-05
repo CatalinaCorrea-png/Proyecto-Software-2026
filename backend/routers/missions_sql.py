@@ -71,6 +71,12 @@ async def mission_stop():
     close_mission_db()
     ms.mission_configured = False
     drone_state.status = "idle"
+
+    # Avisar a los clientes de misión conectados (invitados + rol USER en modo
+    # lectura) que ya no hay actualizaciones en tiempo real para esta misión.
+    if ms.mission_clients:
+        await ms.broadcast(ms.mission_clients, json.dumps({"type": "mission_finished"}))
+
     return {"status": "stopped"}
 
 

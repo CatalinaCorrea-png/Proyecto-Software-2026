@@ -68,6 +68,29 @@ def test_flujo_mision_lifecycle(client, auth_headers):
     assert client.delete(f"/missions/{mission_id}", headers=auth_headers).status_code == 204
 
 
+def test_mission_finished_notifica_a_clientes_conectados(client, auth_headers):
+    # Un cliente conectado a /ws/mission (invitado o USER en modo lectura) debe
+    # recibir un evento "mission_finished" apenas el admin finaliza la mision,
+    # para poder mostrar el modal de "misión finalizada" y cortar la conexión.
+    r = client.post("/mission/setup", json=SETUP_PAYLOAD, headers=auth_headers)
+    assert r.status_code == 200, r.text
+
+    with client.websocket_connect("/ws/mission") as ws:
+        first = json.loads(ws.receive_text())
+        assert first["type"] == "telemetry"
+
+        r = client.post("/mission/stop", headers=auth_headers)
+        assert r.status_code == 200, r.text
+
+        got_finished = False
+        for _ in range(5):
+            msg = json.loads(ws.receive_text())
+            if msg.get("type") == "mission_finished":
+                got_finished = True
+                break
+        assert got_finished, "no se recibio el evento mission_finished"
+
+
 def test_deteccion_se_persiste_en_sqlite(client, auth_headers):
     # 1. Configurar la mision (deja el grid armado y el dron en el centro)
     r = client.post("/mission/setup", json=SETUP_PAYLOAD, headers=auth_headers)

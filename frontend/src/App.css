@@ -73,6 +73,30 @@
   color: #fff;
 }
 
+/* Acción del admin para compartir el enlace de modo lectura (feature de roles) */
+.app-nav__btn--share {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 4px;
+  color: #00E5FF;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.app-nav__btn--share:hover {
+  background: #00E5FF;
+  border-color: #00E5FF;
+  color: #05080F;
+}
+
 .app-content {
   flex: 1;
   min-height: 0;
