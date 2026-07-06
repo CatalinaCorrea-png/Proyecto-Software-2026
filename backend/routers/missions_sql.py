@@ -1,10 +1,12 @@
 import asyncio
+import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 import core.mission_state as ms
+from auth.dependencies import require_admin
 from core.state import drone_state, reset_mission
 from db.database import SessionLocal
 from db.mission_ops import close_mission_db
@@ -45,12 +47,13 @@ def _mission_to_dict(m: MissionModel) -> dict:
     }
 
 
+# Público: el estado de misión activa lo consulta también el modo invitado (solo lectura).
 @router.get("/mission/active")
 def mission_active():
     return {"active": ms.mission_configured and drone_state.mission_active}
 
 
-@router.post("/mission/stop")
+@router.post("/mission/stop", dependencies=[Depends(require_admin)])
 async def mission_stop():
     if not drone_state.mission_active and (ms.simulation_task is None or ms.simulation_task.done()):
         raise HTTPException(status_code=400, detail="No hay misión activa")
@@ -60,13 +63,24 @@ async def mission_stop():
             await asyncio.wait_for(ms.simulation_task, timeout=3.0)
         except (asyncio.TimeoutError, Exception):
             ms.simulation_task.cancel()
+    if ms.detection_task and not ms.detection_task.done():
+        try:
+            await asyncio.wait_for(ms.detection_task, timeout=3.0)
+        except (asyncio.TimeoutError, Exception):
+            ms.detection_task.cancel()
     close_mission_db()
     ms.mission_configured = False
     drone_state.status = "idle"
+
+    # Avisar a los clientes de misión conectados (invitados + rol USER en modo
+    # lectura) que ya no hay actualizaciones en tiempo real para esta misión.
+    if ms.mission_clients:
+        await ms.broadcast(ms.mission_clients, json.dumps({"type": "mission_finished"}))
+
     return {"status": "stopped"}
 
 
-@router.post("/mission/setup")
+@router.post("/mission/setup", dependencies=[Depends(require_admin)])
 async def mission_setup(req: MissionSetupRequest):
     ms.mission_name = req.name
     ms.mission_altitude = req.altitude
@@ -77,6 +91,12 @@ async def mission_setup(req: MissionSetupRequest):
             await asyncio.wait_for(ms.simulation_task, timeout=3.0)
         except (asyncio.TimeoutError, Exception):
             ms.simulation_task.cancel()
+    if ms.detection_task and not ms.detection_task.done():
+        drone_state.mission_active = False
+        try:
+            await asyncio.wait_for(ms.detection_task, timeout=3.0)
+        except (asyncio.TimeoutError, Exception):
+            ms.detection_task.cancel()
     close_mission_db()
     ms.mission_configured = True
 
@@ -86,6 +106,21 @@ async def mission_setup(req: MissionSetupRequest):
         cell_size_m=req.cell_size_m,
     )
     ms.detection_history.clear()
+
+    # Avisar a los clientes de grilla ya conectados (admin + invitados) que la grilla
+    # se reinició, para que no queden celdas marcadas de la misión anterior hasta el refresh.
+    if ms.grid_clients:
+        grid_init = json.dumps({
+            "type": "grid_init",
+            "cells": grid.get_all_cells(),
+            "coverage": grid.coverage_percent(),
+        })
+        for client in ms.grid_clients.copy():
+            try:
+                await client.send_text(grid_init)
+            except Exception:
+                ms.grid_clients.remove(client)
+
     return {
         "status": "ready",
         "name": req.name,
@@ -99,7 +134,7 @@ async def mission_setup(req: MissionSetupRequest):
     }
 
 
-@router.get("/missions")
+@router.get("/missions", dependencies=[Depends(require_admin)])
 def list_missions():
     db = SessionLocal()
     try:
@@ -109,7 +144,7 @@ def list_missions():
         db.close()
 
 
-@router.delete("/missions/{mission_id}", status_code=204)
+@router.delete("/missions/{mission_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_mission(mission_id: int):
     db = SessionLocal()
     try:
@@ -125,7 +160,7 @@ async def delete_mission(mission_id: int):
     await delete_images_by_mission(str(mission_id))
 
 
-@router.get("/missions/{mission_id}")
+@router.get("/missions/{mission_id}", dependencies=[Depends(require_admin)])
 def get_mission(mission_id: int):
     db = SessionLocal()
     try:

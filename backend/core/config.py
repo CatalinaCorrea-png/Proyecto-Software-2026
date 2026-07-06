@@ -29,3 +29,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./aerosearch.db")
 # MongoDB
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 MONGODB_DB  = os.getenv("MONGODB_DB",  "aerosearch")
+
+# JWT Auth
+JWT_SECRET_KEY     = os.getenv("JWT_SECRET_KEY", "aerosearch-dev-secret-change-in-production")
+JWT_ALGORITHM      = "HS256"
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "480"))  # 8 hours

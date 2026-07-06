@@ -3,7 +3,7 @@ import base64
 import json
 import time
 import uuid
-from datetime import datetime, datetime as _dt, timezone
+from datetime import datetime, timezone
 
 import cv2
 import numpy as np
@@ -32,12 +32,16 @@ _DETECTION_COOLDOWN = 3.0
 async def mission_websocket(websocket: WebSocket):
     await websocket.accept()
     print("🔌 Misión conectada")
+    ms.mission_clients.append(websocket)
 
     if ms.mission_configured and (ms.simulation_task is None or ms.simulation_task.done()):
         drone_state.mission_start = time.time()
         drone_state.sim_step = 0
         drone_state.battery = 100.0
         drone_state.status = "idle"
+        # Marcamos la misión activa ya mismo: el productor de detección corre
+        # `while mission_active`, así que debe estar en True antes de lanzarlo.
+        drone_state.mission_active = True
 
         db = SessionLocal()
         try:
@@ -63,6 +67,8 @@ async def mission_websocket(websocket: WebSocket):
             db.close()
 
         ms.simulation_task = asyncio.create_task(run_simulation())
+        # Un ÚNICO productor de detección para toda la misión (no uno por cliente).
+        ms.detection_task = asyncio.create_task(run_detection_producer())
 
     try:
         while True:
@@ -70,6 +76,11 @@ async def mission_websocket(websocket: WebSocket):
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         print("❌ Misión desconectada (simulación sigue corriendo)")
+    finally:
+        try:
+            ms.mission_clients.remove(websocket)
+        except ValueError:
+            pass
 
 
 @router.websocket("/ws/grid")
@@ -88,21 +99,19 @@ async def grid_websocket(websocket: WebSocket):
         ms.grid_clients.remove(websocket)
 
 
-@router.websocket("/ws/detection")
-async def detection_websocket(websocket: WebSocket):
-    await websocket.accept()
+# Alias: el helper vive en core.mission_state para que otros routers
+# (p. ej. missions_sql.mission_stop) puedan reusarlo sin importar este módulo.
+_broadcast = ms.broadcast
 
-    if ms.detection_history:
-        await websocket.send_text(json.dumps({
-            "type": "detection_history",
-            "data": ms.detection_history,
-        }))
 
-    for _ in range(20):
-        if ms.active_mission_id is not None:
-            break
-        await asyncio.sleep(0.25)
+async def run_detection_producer() -> None:
+    """Productor ÚNICO de la transmisión de detección de la misión.
 
+    Corre mientras la misión esté activa, sin importar cuántos espectadores haya.
+    Hace grab + inferencia + fusión + persistencia UNA sola vez por frame y transmite
+    el resultado a todos los `detection_clients`. Si no hay nadie mirando, igual infiere
+    y persiste (graba la misión), pero se saltea el encode JPEG/base64 que es lo caro.
+    """
     grabber = get_grabber()
     has_camera = grabber._running
     frame_w = grabber.frame_w
@@ -111,54 +120,57 @@ async def detection_websocket(websocket: WebSocket):
     detected_positions: set[tuple[float, float]] = set()
     last_detection_time: float = 0.0
 
-    try:
-        while True:
-            if has_camera:
-                frame = grabber.grab()
-                if frame is None:
-                    await asyncio.sleep(0.05)
-                    continue
-                last_frame = frame
-            else:
-                frame = last_frame if last_frame is not None else \
-                    np.random.randint(80, 120, (frame_h, frame_w, 3), dtype=np.uint8)
+    while drone_state.mission_active:
+        if has_camera:
+            frame = grabber.grab()
+            if frame is None:
+                await asyncio.sleep(0.05)
+                continue
+            last_frame = frame
+        else:
+            frame = last_frame if last_frame is not None else \
+                np.random.randint(80, 120, (frame_h, frame_w, 3), dtype=np.uint8)
 
-            rgb_detections, (t_matrix, t_dets) = await asyncio.gather(
-                asyncio.to_thread(yolo.detect, frame),
-                asyncio.to_thread(_run_thermal, frame),
+        rgb_detections, (t_matrix, t_dets) = await asyncio.gather(
+            asyncio.to_thread(yolo.detect, frame),
+            asyncio.to_thread(_run_thermal, frame),
+        )
+
+        # La fusión decide qué detecciones valen; se necesita siempre (para persistir).
+        fused = fuse_detections(rgb_detections, t_dets, frame_w=frame_w, frame_h=frame_h)
+
+        geo_detections = []
+        for det in fused:
+            geo_det = {
+                **det,
+                "id": str(uuid.uuid4()),
+                "position": {
+                    "lat": drone_state.lat,
+                    "lng": drone_state.lng,
+                    "altitude": drone_state.altitude,
+                    "timestamp": int(time.time() * 1000),
+                },
+            }
+            geo_detections.append(geo_det)
+
+            conf_label = det["confidence"]
+            pos_key = (round(drone_state.lat, 5), round(drone_state.lng, 5))
+            now = time.time()
+            if (
+                conf_label in ("high", "medium")
+                and (now - last_detection_time) >= _DETECTION_COOLDOWN
+                and pos_key not in detected_positions
+            ):
+                last_detection_time = now
+                detected_positions.add(pos_key)
+                await _handle_detection(det, geo_det, rgb_detections, frame, conf_label)
+
+        # Transmitir a los espectadores solo si hay alguno (evita el encode caro).
+        if ms.detection_clients:
+            frame_b64, overlay_b64 = await asyncio.to_thread(
+                _encode_frames, frame, rgb_detections, t_matrix
             )
-
-            fused, frame_b64, overlay_b64 = await asyncio.to_thread(
-                _fuse_and_encode, frame, rgb_detections, t_matrix, t_dets, frame_w, frame_h
-            )
-
-            geo_detections = []
-            for det in fused:
-                geo_det = {
-                    **det,
-                    "id": str(uuid.uuid4()),
-                    "position": {
-                        "lat": drone_state.lat,
-                        "lng": drone_state.lng,
-                        "altitude": drone_state.altitude,
-                        "timestamp": int(time.time() * 1000),
-                    },
-                }
-                geo_detections.append(geo_det)
-
-                conf_label = det["confidence"]
-                pos_key = (round(drone_state.lat, 5), round(drone_state.lng, 5))
-                now = time.time()
-                if (
-                    conf_label in ("high", "medium")
-                    and (now - last_detection_time) >= _DETECTION_COOLDOWN
-                    and pos_key not in detected_positions
-                ):
-                    last_detection_time = now
-                    detected_positions.add(pos_key)
-                    await _handle_detection(websocket, det, geo_det, rgb_detections, frame, conf_label)
-
-            await websocket.send_text(json.dumps({
+            await _broadcast(ms.detection_clients, json.dumps({
                 "type": "frame",
                 "frame": frame_b64,
                 "thermal_overlay": overlay_b64,
@@ -166,10 +178,44 @@ async def detection_websocket(websocket: WebSocket):
                 "detection_count": len(fused),
             }))
 
-            await asyncio.sleep(1 / 15)
+        await asyncio.sleep(1 / 15)
 
+
+def ensure_detection_producer() -> None:
+    """Arranca el productor si la misión está activa y no está corriendo (autocuración)."""
+    if drone_state.mission_active and (ms.detection_task is None or ms.detection_task.done()):
+        ms.detection_task = asyncio.create_task(run_detection_producer())
+
+
+@router.websocket("/ws/detection")
+async def detection_websocket(websocket: WebSocket):
+    """Consumidor puro: se suscribe a la transmisión de detección y la recibe.
+
+    No infiere ni persiste nada (modo lectura seguro): el pipeline lo corre una sola
+    vez `run_detection_producer()` para toda la misión.
+    """
+    await websocket.accept()
+
+    # Historial para el que recién entra.
+    if ms.detection_history:
+        await websocket.send_text(json.dumps({
+            "type": "detection_history",
+            "data": ms.detection_history,
+        }))
+
+    ms.detection_clients.append(websocket)
+    ensure_detection_producer()
+
+    try:
+        while True:
+            await websocket.receive_text()
     except WebSocketDisconnect:
         pass
+    finally:
+        try:
+            ms.detection_clients.remove(websocket)
+        except ValueError:
+            pass
 
 
 def _run_thermal(frame: np.ndarray) -> tuple:
@@ -178,11 +224,8 @@ def _run_thermal(frame: np.ndarray) -> tuple:
     return t_matrix, t_dets
 
 
-def _fuse_and_encode(
-    frame: np.ndarray, rgb_dets, t_mat, t_ds, frame_w: int, frame_h: int
-) -> tuple:
-    fused = fuse_detections(rgb_dets, t_ds, frame_w=frame_w, frame_h=frame_h)
-
+def _encode_frames(frame: np.ndarray, rgb_dets, t_mat) -> tuple[str, str]:
+    """Anota el frame RGB y arma el overlay térmico, ambos como JPEG base64."""
     annotated = yolo.draw(frame.copy(), rgb_dets)
     _, buf1 = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 60])
     frame_b64 = base64.b64encode(buf1).decode()
@@ -191,20 +234,17 @@ def _fuse_and_encode(
     _, buf2 = cv2.imencode('.jpg', overlay, [cv2.IMWRITE_JPEG_QUALITY, 60])
     overlay_b64 = base64.b64encode(buf2).decode()
 
-    return fused, frame_b64, overlay_b64
+    return frame_b64, overlay_b64
 
 
-async def _handle_detection(websocket, det, geo_det, rgb_detections, frame, conf_label: str):
+async def _handle_detection(det, geo_det, rgb_detections, frame, conf_label: str):
     detection_cell = state.search_grid.mark_detection(drone_state.lat, drone_state.lng)
     if detection_cell and ms.grid_clients:
-        await asyncio.gather(*[
-            client.send_text(json.dumps({
-                "type": "grid_update",
-                "cells": [detection_cell],
-                "coverage": state.search_grid.coverage_percent(),
-            }))
-            for client in ms.grid_clients.copy()
-        ])
+        await _broadcast(ms.grid_clients, json.dumps({
+            "type": "grid_update",
+            "cells": [detection_cell],
+            "coverage": state.search_grid.coverage_percent(),
+        }))
 
     det_msg = {
         "id": geo_det["id"],
@@ -215,7 +255,7 @@ async def _handle_detection(websocket, det, geo_det, rgb_detections, frame, conf
         "timestamp": int(time.time() * 1000),
     }
     ms.detection_history.append(det_msg)
-    await websocket.send_text(json.dumps({"type": "detection", "data": det_msg}))
+    await _broadcast(ms.detection_clients, json.dumps({"type": "detection", "data": det_msg}))
 
     if ms.active_mission_id:
         db = SessionLocal()
@@ -272,7 +312,7 @@ async def _persist_image(frame, conf_label: str, det, all_dets, mission_id: int)
             lat=lat,
             lng=lng,
             altitude_m=alt,
-            timestamp=_dt.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             view_mode="rgb",
             camera_source=CAMERA_SOURCE,
             detections=[det_payload],

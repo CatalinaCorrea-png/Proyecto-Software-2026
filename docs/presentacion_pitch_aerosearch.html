@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AeroSearch AI — Pitch</title>
+</head>
+<body>
+<style>
+  :root {
+    /* Ground — tomado del propio producto y elevado para proyección */
+    --bg:        #070B14;
+    --bg-2:      #0A0E1A;
+    --panel:     #0D1B2A;
+    --panel-2:   #111B2B;
+    --line:      #1E2D3D;
+    --line-soft: rgba(255,255,255,0.06);
+
+    /* Acento: naranja de rescate. Toda la audacia vive acá. */
+    --accent:    #FF6D00;
+    --accent-dim:rgba(255,109,0,0.14);
+
+    /* Semánticos (separados del acento) */
+    --ok:   #00C853;
+    --info: #00BCD4;
+    --warn: #FFC107;
+    --crit: #FF5252;
+
+    /* Neutros con sesgo frío hacia el navy — elegidos, no default */
+    --text:     #DDE6EE;
+    --muted:    #8CA0B3;
+    --faint:    #55697B;
+    --faintest: #35485A;
+
+    --mono: ui-monospace, 'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+    --sans: system-ui, 'Segoe UI', Roboto, -apple-system, sans-serif;
+
+    --edge: clamp(20px, 5vw, 84px);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Fondo: grilla + scanlines, guiño al mapa de cobertura del producto ── */
+  .fx {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  }
+  .fx--grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: radial-gradient(ellipse 90% 80% at 50% 45%, #000 55%, transparent 100%);
+  }
+  .fx--scan {
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.16) 3px, rgba(0,0,0,0.16) 4px);
+    opacity: 0.35;
+  }
+  .fx--glow {
+    background:
+      radial-gradient(60% 55% at 78% 12%, rgba(255,109,0,0.10), transparent 60%),
+      radial-gradient(50% 50% at 10% 92%, rgba(0,188,212,0.07), transparent 60%);
+  }
+
+  /* ── HUD chrome fijo ── */
+  .hud { position: fixed; z-index: 20; font-family: var(--mono); pointer-events: none; }
+  .hud--top {
+    top: 0; left: 0; right: 0; height: 46px;
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 var(--edge);
+    border-bottom: 1px solid var(--line-soft);
+    background: linear-gradient(180deg, rgba(7,11,20,0.9), rgba(7,11,20,0));
+    font-size: 11px; letter-spacing: 1.5px;
+  }
+  .brand { color: var(--accent); font-weight: 700; text-transform: uppercase; }
+  .rec { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+  .rec b { width: 7px; height: 7px; border-radius: 50%; background: var(--crit); box-shadow: 0 0 8px var(--crit); animation: blink 1.6s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0.25; } }
+  .hud--top .sect { margin-left: auto; color: var(--faint); text-transform: uppercase; }
+  .hud--top .count { color: var(--muted); }
+  .hud--top .count b { color: var(--accent); }
+
+  /* progreso + nav */
+  .hud--bot {
+    bottom: 0; left: 0; right: 0; height: 44px;
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 var(--edge);
+    font-size: 10px; letter-spacing: 1.5px; color: var(--faint);
+    text-transform: uppercase;
+  }
+  .track { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--line); }
+  .track > i { display: block; height: 100%; width: 0; background: var(--accent); box-shadow: 0 0 10px var(--accent); transition: width .45s cubic-bezier(.4,0,.2,1); }
+  .nav { margin-left: auto; display: flex; gap: 8px; pointer-events: auto; }
+  .nav button {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 5px;
+    padding: 5px 12px; cursor: pointer; transition: .15s;
+  }
+  .nav button:hover { border-color: var(--accent); color: var(--accent); }
+  .nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .dots { display: flex; gap: 6px; pointer-events: auto; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--faintest); cursor: pointer; transition: .2s; }
+  .dots i.on { background: var(--accent); box-shadow: 0 0 7px var(--accent); transform: scale(1.15); }
+
+  /* ── Slides ── */
+  .deck { position: relative; z-index: 5; height: 100%; }
+  .slide {
+    position: absolute; inset: 0;
+    padding: 78px var(--edge) 70px;
+    display: none; flex-direction: column; justify-content: center;
+    opacity: 0;
+  }
+  .slide.on { display: flex; animation: enter .5s cubic-bezier(.22,.61,.36,1) both; }
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slide.on { animation: none; opacity: 1; }
+    .rec b { animation: none; }
+  }
+
+  /* corner ticks — motivo HUD propio del producto */
+  .slide::before, .slide::after {
+    content: ""; position: absolute; width: 26px; height: 26px; pointer-events: none;
+    border-color: var(--accent); opacity: .5;
+  }
+  .slide::before { top: 58px; left: calc(var(--edge) - 14px); border-top: 2px solid; border-left: 2px solid; }
+  .slide::after  { bottom: 52px; right: calc(var(--edge) - 14px); border-bottom: 2px solid; border-right: 2px solid; }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: clamp(10px, 1.1vw, 13px);
+    letter-spacing: 3px; text-transform: uppercase; color: var(--accent);
+    display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+  }
+  .eyebrow .n { color: var(--faint); }
+  .eyebrow .bar { flex: 0 0 34px; height: 2px; background: var(--accent); }
+
+  h1 {
+    font-family: var(--mono); font-weight: 700;
+    font-size: clamp(30px, 6vw, 74px); line-height: 1.02;
+    letter-spacing: -1px; margin: 0; color: var(--text);
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: var(--mono); font-weight: 700;
+    font-size: clamp(24px, 3.6vw, 46px); line-height: 1.06;
+    letter-spacing: -.5px; margin: 0 0 6px; color: var(--text);
+    text-wrap: balance;
+  }
+  .lead {
+    font-size: clamp(15px, 1.7vw, 21px); line-height: 1.5; color: var(--muted);
+    max-width: 60ch; margin: 14px 0 0;
+  }
+  .lead strong { color: var(--text); font-weight: 600; }
+  .accent { color: var(--accent); }
+  .kicker { color: var(--info); }
+
+  .grid { display: grid; gap: clamp(12px, 1.6vw, 20px); margin-top: clamp(20px, 3vh, 38px); }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 820px) { .g2, .g3, .g4 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: linear-gradient(180deg, var(--panel), var(--bg-2));
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: clamp(14px, 1.6vw, 22px);
+    display: flex; flex-direction: column; gap: 8px;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; top: 0; left: 0; width: 22px; height: 2px; background: var(--accent);
+  }
+  .card .ic { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
+  .card h3 { margin: 2px 0 0; font-family: var(--mono); font-size: clamp(15px,1.5vw,18px); color: var(--text); font-weight: 700; }
+  .card p { margin: 0; font-size: clamp(13px,1.15vw,15px); line-height: 1.45; color: var(--muted); }
+
+  /* KPI tiles */
+  .kpi { text-align: left; }
+  .kpi .val { font-family: var(--mono); font-size: clamp(20px,2.4vw,30px); font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .kpi .val.info { color: var(--info); }
+  .kpi .val.ok { color: var(--ok); }
+  .kpi .unit { font-size: .5em; color: var(--faint); }
+  .kpi .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .kpi .sub { font-size: 12px; color: var(--faint); line-height: 1.35; }
+
+  /* stepper (demo) */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 30px; }
+  @media (max-width: 820px){ .steps { grid-template-columns: 1fr 1fr; } }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; position: relative; }
+  .step .num { font-family: var(--mono); font-size: 12px; color: var(--accent); letter-spacing: 2px; }
+  .step h3 { font-family: var(--mono); margin: 8px 0 4px; font-size: 16px; color: var(--text); }
+  .step p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .step:not(:last-child)::after {
+    content: "→"; position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+    color: var(--accent); font-family: var(--mono); z-index: 6;
+  }
+  @media (max-width: 820px){ .step::after { display: none; } }
+
+  /* arquitectura flow */
+  .flow { display: flex; align-items: stretch; gap: 10px; margin-top: 28px; flex-wrap: wrap; }
+  .node {
+    flex: 1 1 150px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px 16px; min-width: 140px;
+  }
+  .node .t { font-family: var(--mono); color: var(--accent); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .node .d { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .node.mid .t { color: var(--info); }
+  .arrow { align-self: center; color: var(--faint); font-family: var(--mono); font-size: 20px; }
+  @media (max-width: 820px){ .arrow { display: none; } .flow { flex-direction: column; } }
+
+  ul.clean { list-style: none; padding: 0; margin: 18px 0 0; display: flex; flex-direction: column; gap: 12px; }
+  ul.clean li { display: flex; gap: 12px; font-size: clamp(14px,1.3vw,17px); line-height: 1.45; color: var(--muted); }
+  ul.clean li::before { content: "▸"; color: var(--accent); font-family: var(--mono); flex: 0 0 auto; }
+  ul.clean li strong { color: var(--text); font-weight: 600; }
+
+  .tag { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+         padding: 3px 9px; border-radius: 4px; border: 1px solid; }
+  .tag.warn { color: var(--warn); border-color: rgba(255,193,7,.4); background: rgba(255,193,7,.08); }
+  .tag.ok   { color: var(--ok);   border-color: rgba(0,200,83,.4);  background: rgba(0,200,83,.08); }
+  .tag.crit { color: var(--crit); border-color: rgba(255,82,82,.4);  background: rgba(255,82,82,.08); }
+
+  /* Title slide */
+  .title-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .title-sub { font-size: clamp(15px,2vw,24px); color: var(--muted); font-family: var(--mono); letter-spacing: 1px; margin-top: 6px; }
+  .team { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 34px; font-family: var(--mono); font-size: 13px; color: var(--faint); }
+  .team span b { color: var(--muted); font-weight: 500; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+
+  .footnote { margin-top: 22px; font-family: var(--mono); font-size: 12px; color: var(--faint); letter-spacing: .5px; }
+
+  .two { display: grid; grid-template-columns: 1.1fr .9fr; gap: clamp(20px,3vw,54px); align-items: center; }
+  @media (max-width: 900px){ .two { grid-template-columns: 1fr; } }
+
+  .big-quote { font-family: var(--mono); font-size: clamp(22px,3.4vw,44px); line-height: 1.18; color: var(--text); letter-spacing: -.5px; text-wrap: balance; }
+  .big-quote .accent { color: var(--accent); }
+
+  .speaker { position: fixed; z-index: 20; bottom: 52px; left: var(--edge); font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--faintest); text-transform: uppercase; }
+</style>
+
+<div class="fx fx--glow"></div>
+<div class="fx fx--grid"></div>
+<div class="fx fx--scan"></div>
+
+<div class="hud hud--top">
+  <span class="brand">◈ AeroSearch AI</span>
+  <span class="rec"><b></b> LIVE PITCH</span>
+  <span class="sect" id="sect">Portada</span>
+  <span class="count">SLIDE <b id="cnum">01</b> / <span id="ctot">13</span></span>
+</div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 · Portada -->
+  <section class="slide" data-sect="Portada" data-speaker="Catalina">
+    <div class="title-wrap">
+      <div class="eyebrow"><span class="bar"></span> Sistema de búsqueda y rescate asistido por drones</div>
+      <h1>AeroSearch <span class="accent">AI</span></h1>
+      <div class="title-sub">Encontrar personas antes de que el tiempo se agote.</div>
+      <div class="meta-row">
+        <span class="tag ok">Prototipo funcional</span>
+        <span class="tag" style="color:var(--info);border-color:rgba(0,188,212,.4);background:rgba(0,188,212,.08)">Visión RGB + Térmica</span>
+        <span class="tag warn">Proyecto de Software · UNSAM</span>
+      </div>
+      <div class="team">
+        <span><b>Catalina Correa</b> · <b>Nicolás Cernadas</b> · <b>Dana Cossettini Reyes</b> · <b>Maximiliano Bianchimano</b> · <b>Fernanda Pérez</b> · <b>Martín Schubert</b></span>
+      </div>
+      <div class="footnote">Ingeniería en Computación — 3.er año · Cátedra de Proyecto de Software · 2026</div>
+    </div>
+  </section>
+
+  <!-- 2 · Problema -->
+  <section class="slide" data-sect="El problema" data-speaker="Catalina">
+    <div class="eyebrow"><span class="n">01</span><span class="bar"></span> El problema</div>
+    <div class="two">
+      <div>
+        <h2>En un rescate, <span class="accent">cada minuto cuenta</span> — y la búsqueda manual es lenta.</h2>
+        <p class="lead">Rastrear terreno amplio a pie es lento, peligroso para los rescatistas y difícil de sistematizar: no hay forma simple de saber <strong>qué zona ya se cubrió</strong> ni de detectar a una persona oculta por vegetación o de noche.</p>
+      </div>
+      <div class="grid g2" style="margin-top:0">
+        <div class="card kpi"><div class="lbl">Ventana crítica</div><div class="val info">72<span class="unit">h</span></div><div class="sub">La probabilidad de supervivencia cae fuerte con las horas.</div></div>
+        <div class="card kpi"><div class="lbl">Búsqueda a pie</div><div class="val">km²<span class="unit">/día</span></div><div class="sub">Cobertura escasa, fatiga y riesgo para el equipo.</div></div>
+        <div class="card kpi"><div class="lbl">Sensores aislados</div><div class="val">RGB</div><div class="sub">Una sola cámara falla con oclusión o poca luz.</div></div>
+        <div class="card kpi"><div class="lbl">Sin trazabilidad</div><div class="val">?</div><div class="sub">Difícil auditar qué se buscó y dónde.</div></div>
+      </div>
+    </div>
+    <div class="footnote">Reemplazar las cifras por datos citados de una fuente de SAR real antes de presentar.</div>
+  </section>
+
+  <!-- 3 · Propuesta de valor -->
+  <section class="slide" data-sect="Propuesta" data-speaker="Nicolás">
+    <div class="eyebrow"><span class="n">02</span><span class="bar"></span> Propuesta de valor</div>
+    <p class="big-quote">Reducimos el tiempo hasta encontrar a una persona: fusionamos <span class="accent">visión RGB + térmica</span> sobre un <span class="accent">barrido sistemático</span> del terreno, con conciencia situacional en vivo para el operador.</p>
+    <ul class="clean">
+      <li><strong>Más rápido:</strong> el dron cubre en minutos lo que a un equipo le lleva horas.</li>
+      <li><strong>Más confiable:</strong> dos sensores se complementan donde uno solo falla.</li>
+      <li><strong>Más ordenado:</strong> grilla de cobertura + registro auditable de cada hallazgo.</li>
+    </ul>
+  </section>
+
+  <!-- 4 · Qué hace -->
+  <section class="slide" data-sect="Qué hace" data-speaker="Nicolás">
+    <div class="eyebrow"><span class="n">03</span><span class="bar"></span> Qué hace — los diferenciadores</div>
+    <h2>Cuatro capacidades, no un catálogo de features.</h2>
+    <div class="grid g4">
+      <div class="card"><span class="ic">Fusión</span><h3>RGB + Térmica</h3><p>Combina detección visual y térmica: robusto a oclusión, vegetación y baja luz.</p></div>
+      <div class="card"><span class="ic">Barrido</span><h3>Grilla + cobertura</h3><p>Búsqueda sistemática con % de terreno cubierto en vivo. Nada queda al azar.</p></div>
+      <div class="card"><span class="ic">Tiempo real</span><h3>Conciencia situacional</h3><p>Telemetría, cámara, mapa y alertas de detección por WebSocket, al instante.</p></div>
+      <div class="card"><span class="ic">Registro</span><h3>Trazabilidad total</h3><p>Cada detección queda georreferenciada y guardada: galería + historial auditable.</p></div>
+    </div>
+  </section>
+
+  <!-- 5 · Demo -->
+  <section class="slide" data-sect="Demo en vivo" data-speaker="Dana">
+    <div class="eyebrow"><span class="n">04</span><span class="bar"></span> Demo en vivo</div>
+    <h2>Una misión, de principio a fin.</h2>
+    <p class="lead">El flujo que vas a ver ahora en pantalla — <span class="kicker">con video de respaldo listo por las dudas</span>.</p>
+    <div class="steps">
+      <div class="step"><div class="num">PASO 01</div><h3>Configurar</h3><p>Se define zona, altitud y grilla de búsqueda desde el panel de misión.</p></div>
+      <div class="step"><div class="num">PASO 02</div><h3>Barrer</h3><p>El dron recorre la grilla; el mapa se pinta con la cobertura en tiempo real.</p></div>
+      <div class="step"><div class="num">PASO 03</div><h3>Detectar</h3><p>La fusión dispara una alerta y captura la imagen georreferenciada.</p></div>
+      <div class="step"><div class="num">PASO 04</div><h3>Registrar</h3><p>El hallazgo aparece en la galería y queda en el historial de la misión.</p></div>
+    </div>
+  </section>
+
+  <!-- 6 · Arquitectura -->
+  <section class="slide" data-sect="Arquitectura" data-speaker="Maximiliano">
+    <div class="eyebrow"><span class="n">05</span><span class="bar"></span> Cómo funciona — arquitectura</div>
+    <h2>De la cámara al operador, en tiempo real.</h2>
+    <div class="flow">
+      <div class="node"><div class="t">Captura</div><div class="d">Dron / ESP32 · cámara + telemetría por UDP.</div></div>
+      <div class="arrow">→</div>
+      <div class="node mid"><div class="t">Backend · FastAPI</div><div class="d">Pipeline: YOLO + térmica → fusión → persistencia. Un productor único para N espectadores.</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="t">Datos</div><div class="d">MongoDB (imágenes geo) + SQL (misiones, usuarios, detecciones).</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="t">Frontend · React</div><div class="d">Mapa, telemetría y alertas vía WebSocket.</div></div>
+    </div>
+    <ul class="clean">
+      <li><strong>Decisión de diseño:</strong> el pipeline corre <em>una sola vez</em> por misión y se transmite a todos los que miran — escala en espectadores sin recomputar.</li>
+      <li><strong>Tiempo real:</strong> WebSockets separados para telemetría, grilla y detección.</li>
+    </ul>
+  </section>
+
+  <!-- 7 · Evidencia / métricas -->
+  <section class="slide" data-sect="Evidencia" data-speaker="Maximiliano">
+    <div class="eyebrow"><span class="n">06</span><span class="bar"></span> Evidencia — no lo afirmamos, lo medimos</div>
+    <h2>El sistema se autoinstrumenta con métricas operacionales.</h2>
+    <div class="grid g4">
+      <div class="card kpi"><div class="lbl">TTFD</div><div class="val">min</div><div class="sub">Tiempo hasta la primera detección.</div></div>
+      <div class="card kpi"><div class="lbl">Eficiencia de barrido</div><div class="val info">m²<span class="unit">/min</span></div><div class="sub">Terreno cubierto por minuto de vuelo.</div></div>
+      <div class="card kpi"><div class="lbl">Densidad</div><div class="val">det<span class="unit">/km²</span></div><div class="sub">Detecciones por área explorada.</div></div>
+      <div class="card kpi"><div class="lbl">Batería / km²</div><div class="val ok">%<span class="unit">/km²</span></div><div class="sub">Costo energético de cubrir terreno.</div></div>
+    </div>
+    <ul class="clean">
+      <li><strong>Además:</strong> altitud vs. confianza de detección — a qué altura conviene volar.</li>
+      <li>Cerrá este slide con <span class="accent">una conclusión real</span> sacada de tus propios datos de vuelo.</li>
+    </ul>
+  </section>
+
+  <!-- 8 · Roles / stakeholders -->
+  <section class="slide" data-sect="Usuarios" data-speaker="Fernanda">
+    <div class="eyebrow"><span class="n">07</span><span class="bar"></span> Usuarios y control de acceso</div>
+    <h2>Pensado para una operación multi-actor.</h2>
+    <div class="grid g3">
+      <div class="card"><span class="ic">Operador · Admin</span><h3>Controla la misión</h3><p>Configura, inicia y finaliza vuelos; administra el historial y las métricas.</p></div>
+      <div class="card"><span class="ic">Espectador</span><h3>Solo observa</h3><p>Coordinación de emergencia, prensa o familiares siguen la misión en vivo, sin tocar nada.</p></div>
+      <div class="card"><span class="ic">Modelo</span><h3>Roles jerárquicos</h3><p>Permisos acumulativos: el operador también es espectador. Seguro por diseño.</p></div>
+    </div>
+    <p class="lead">El control de acceso no es un extra: define <strong>quién puede qué</strong> en un contexto donde la información es sensible.</p>
+  </section>
+
+  <!-- 9 · Validación -->
+  <section class="slide" data-sect="Validación" data-speaker="Fernanda">
+    <div class="eyebrow"><span class="n">08</span><span class="bar"></span> Validación</div>
+    <h2>No es una demo de humo: está probado.</h2>
+    <div class="grid g3">
+      <div class="card kpi"><div class="lbl">Tests</div><div class="val ok">74<span class="unit">✓</span></div><div class="sub">Suite completa en verde (unitarios + E2E).</div></div>
+      <div class="card kpi"><div class="lbl">Cobertura</div><div class="val info">Auth · Roles · Misiones</div><div class="sub">Los flujos críticos, verificados de punta a punta.</div></div>
+      <div class="card kpi"><div class="lbl">Método</div><div class="val">E2E</div><div class="sub">Se ejercita la app real con hardware y red neutralizados.</div></div>
+    </div>
+    <p class="lead">La autorización por roles y el ciclo de vida de la misión están cubiertos por tests que <strong>bloquean regresiones</strong>.</p>
+    <div class="footnote">Ajustar el conteo de tests al valor real al momento de presentar.</div>
+  </section>
+
+  <!-- 10 · Limitaciones -->
+  <section class="slide" data-sect="Limitaciones" data-speaker="Martín">
+    <div class="eyebrow"><span class="n">09</span><span class="bar"></span> Limitaciones — honestidad de madurez</div>
+    <h2>Qué es hoy, y qué falta para producción.</h2>
+    <ul class="clean">
+      <li><span class="tag warn">TRL prototipo</span>&nbsp; La detección térmica hoy es <strong>simulada</strong>; falta integrar hardware térmico real.</li>
+      <li><span class="tag warn">Entorno</span>&nbsp; Corre en condiciones controladas; no está certificado para operación de rescate real.</li>
+      <li><span class="tag warn">Dependencias</span>&nbsp; Usa servicios externos (mapas, geocoding) con límites de uso.</li>
+    </ul>
+    <p class="lead">Presentar esto como <strong>hoja de ruta técnica</strong>, no como debilidad: sabemos exactamente qué falta y por qué.</p>
+  </section>
+
+  <!-- 11 · Ética -->
+  <section class="slide" data-sect="Ética" data-speaker="Martín">
+    <div class="eyebrow"><span class="n">10</span><span class="bar"></span> Ética y regulación</div>
+    <h2>Volar sobre personas es una responsabilidad.</h2>
+    <div class="grid g3">
+      <div class="card"><span class="ic">Privacidad</span><h3>Imágenes de personas</h3><p>Captura y retención de datos sensibles: acceso por roles, uso acotado al rescate.</p></div>
+      <div class="card"><span class="ic">Regulación</span><h3>Espacio aéreo</h3><p>Operación sujeta a normativa de vuelo de drones (ANAC en Argentina).</p></div>
+      <div class="card"><span class="ic">Uso responsable</span><h3>Solo para asistir</h3><p>Herramienta de apoyo a rescatistas, no de vigilancia ni decisión autónoma.</p></div>
+    </div>
+  </section>
+
+  <!-- 12 · Roadmap -->
+  <section class="slide" data-sect="Roadmap" data-speaker="Martín">
+    <div class="eyebrow"><span class="n">11</span><span class="bar"></span> Trabajo futuro</div>
+    <h2>Hacia dónde va.</h2>
+    <div class="grid g4">
+      <div class="card"><span class="ic">Corto</span><h3>Hardware térmico</h3><p>Reemplazar la simulación por una cámara térmica real.</p></div>
+      <div class="card"><span class="ic">Medio</span><h3>Detección en el borde</h3><p>Inferencia offline en el dron, sin depender de conexión.</p></div>
+      <div class="card"><span class="ic">Medio</span><h3>App responsive</h3><p>Uso en campo desde tablet/celular para el operador.</p></div>
+      <div class="card"><span class="ic">Largo</span><h3>Multi-dron</h3><p>Coordinar varias unidades sobre una misma grilla.</p></div>
+    </div>
+  </section>
+
+  <!-- 13 · Cierre / ask -->
+  <section class="slide" data-sect="Cierre" data-speaker="Martín">
+    <div class="eyebrow"><span class="n">12</span><span class="bar"></span> Cierre</div>
+    <div class="two">
+      <div>
+        <p class="big-quote">En un rescate cada minuto cuenta. <span class="accent">AeroSearch AI convierte esos minutos en cobertura, y esa cobertura en vidas.</span></p>
+      </div>
+      <div>
+        <ul class="clean" style="margin-top:0">
+          <li><strong>Lo que mostramos:</strong> un prototipo funcional, medible y probado.</li>
+          <li><strong>Lo que pedimos:</strong> [continuar el proyecto / feedback / apoyo para la etapa de hardware].</li>
+          <li><strong>Gracias.</strong> Preguntas — estamos para responderlas.</li>
+        </ul>
+        <div class="team" style="margin-top:26px">
+          <span>Equipo AeroSearch AI · UNSAM 2026</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+
+<div class="hud hud--bot">
+  <span class="track"><i id="bar"></i></span>
+  <span id="secttag">Presiona → para avanzar</span>
+  <span class="dots" id="dots"></span>
+  <span class="nav">
+    <button id="prev" aria-label="Anterior">← ANT</button>
+    <button id="next" aria-label="Siguiente">SIG →</button>
+  </span>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let i = 0;
+
+  const cnum = document.getElementById('cnum');
+  const ctot = document.getElementById('ctot');
+  const sect = document.getElementById('sect');
+  const secttag = document.getElementById('secttag');
+  const bar = document.getElementById('bar');
+  const dotsWrap = document.getElementById('dots');
+  ctot.textContent = String(total).padStart(2, '0');
+
+  slides.forEach((s, idx) => {
+    const d = document.createElement('i');
+    d.addEventListener('click', () => go(idx));
+    dotsWrap.appendChild(d);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function go(n) {
+    i = Math.max(0, Math.min(total - 1, n));
+    slides.forEach((s, idx) => s.classList.toggle('on', idx === i));
+    dots.forEach((d, idx) => d.classList.toggle('on', idx === i));
+    const s = slides[i];
+    cnum.textContent = String(i + 1).padStart(2, '0');
+    sect.textContent = s.dataset.sect || '';
+    secttag.textContent = s.dataset.sect || '';
+    bar.style.width = ((i) / (total - 1) * 100) + '%';
+  }
+
+  document.getElementById('next').addEventListener('click', () => go(i + 1));
+  document.getElementById('prev').addEventListener('click', () => go(i - 1));
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(i + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(i - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(total - 1);
+  });
+
+  go(0);
+</script>
+</body>
+</html>

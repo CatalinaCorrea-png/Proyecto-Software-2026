@@ -23,6 +23,7 @@ def session_factory(tmp_path):
 @pytest.fixture
 def client(session_factory, monkeypatch):
     import routers.missions_sql as sql_router
+    from auth.dependencies import get_current_user, require_admin
 
     # Redirigir SessionLocal al SQLite temporal en lugar de aerosearch.db
     monkeypatch.setattr(sql_router, "SessionLocal", session_factory)
@@ -31,6 +32,13 @@ def client(session_factory, monkeypatch):
 
     app = FastAPI()
     app.include_router(sql_router.router)
+    # Las rutas estan detras de auth (require_admin / get_current_user). Estos son
+    # tests de integracion del router de misiones: NO probamos la autenticacion aca,
+    # asi que la anulamos con dependency_overrides para enfocarnos en la logica.
+    # La auth (login y roles) se cubre aparte: login -> tests unitarios;
+    # roles -> tests E2E en tests/e2e/test_e2e_roles.py.
+    app.dependency_overrides[require_admin] = lambda: None
+    app.dependency_overrides[get_current_user] = lambda: None
     return TestClient(app)
 
 

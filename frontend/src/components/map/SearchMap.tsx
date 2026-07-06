@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import { CoverageGrid } from './CoverageGrid'
 import { useSearchGrid } from '../../hooks/useSearchGrid'
 import type { DroneTelemetry, Detection, ImageMeta } from '../../types'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -48,18 +48,45 @@ interface SearchMapProps {
 
 const DEFAULT_CENTER = { lat: -34.6083, lng: -58.3712 }
 
-function AutoCenter({ position }: { position: [number, number] }) {
+// Leaflet mide el contenedor una sola vez al montar. Como el Dashboard nace oculto
+// (display:none) y se muestra al arrancar la misión, el mapa arranca con tamaño 0 y
+// queda gris. Un ResizeObserver detecta cuando el contenedor recupera tamaño (incluida
+// la transición display:none → visible) y recalcula con invalidateSize().
+function MapResizeFix() {
+  const map = useMap()
+
+  useEffect(() => {
+    const invalidate = () => map.invalidateSize()
+    const ro = new ResizeObserver(invalidate)
+    ro.observe(map.getContainer())
+    const t = setTimeout(invalidate, 200)
+    return () => {
+      ro.disconnect()
+      clearTimeout(t)
+    }
+  }, [map])
+
+  return null
+}
+
+function AutoCenter({ position, enabled }: { position: [number, number]; enabled: boolean }) {
   const map = useMap()
   const lastRef = useRef<string>('')
 
   useEffect(() => {
+    // Modo libre: no recentramos. Reseteamos la referencia para que al reanudar
+    // el seguimiento el mapa salte al dron aunque no se haya movido.
+    if (!enabled) {
+      lastRef.current = ''
+      return
+    }
     if (position[0] === 0 && position[1] === 0) return
     const key = `${position[0].toFixed(3)},${position[1].toFixed(3)}`
     if (key !== lastRef.current) {
       map.setView(position, 16)
       lastRef.current = key
     }
-  }, [position, map])
+  }, [position, map, enabled])
 
   return null
 }
@@ -77,9 +104,32 @@ function closestImage(det: Detection, imgs: ImageMeta[]): ImageMeta | undefined 
 export function SearchMap({ telemetry, detections, trail, savedImages = [], onImageClick }: SearchMapProps) {
   const center = telemetry?.position ?? DEFAULT_CENTER
   const { cells, coverage } = useSearchGrid(`${WS_URL}/ws/grid`)
+  // Seguir al dron: arranca activo (comportamiento previo). Cualquier rol lo alterna.
+  // Se persiste en localStorage para que la preferencia sobreviva al refresh.
+  const [follow, setFollow] = useState(() => localStorage.getItem('map_follow') !== '0')
+  useEffect(() => {
+    localStorage.setItem('map_follow', follow ? '1' : '0')
+  }, [follow])
 
   return (
     <div style={{ position: 'relative', height: '100%' }}>
+      {/* Toggle seguir/dejar de seguir al dron — disponible para todos los roles */}
+      <button
+        onClick={() => setFollow(f => !f)}
+        title={follow ? 'El mapa sigue al dron' : 'El mapa está libre para explorar'}
+        style={{
+          // Arriba-izquierda, debajo del control de zoom de Leaflet (~70px de alto).
+          position: 'absolute', top: 84, left: 10, zIndex: 1000,
+          background: follow ? '#FF6D00' : '#0D1B2A',
+          border: `1px solid ${follow ? '#FF6D00' : '#1E3A5F'}`,
+          borderRadius: 6, padding: '6px 12px',
+          fontFamily: 'monospace', color: 'white', fontSize: 13,
+          cursor: 'pointer', letterSpacing: 0.5,
+        }}
+      >
+        {follow ? '◉ Dejar de seguir' : '◎ Seguir al dron'}
+      </button>
+
       {/* Badge de cobertura */}
       <div style={{
         position: 'absolute', top: 12, right: 12, zIndex: 1000,
@@ -101,7 +151,9 @@ export function SearchMap({ telemetry, detections, trail, savedImages = [], onIm
           attribution="© OpenStreetMap"
         />
 
-        {telemetry && <AutoCenter position={[telemetry.position.lat, telemetry.position.lng]} />}
+        <MapResizeFix />
+
+        {telemetry && <AutoCenter position={[telemetry.position.lat, telemetry.position.lng]} enabled={follow} />}
 
         <CoverageGrid cells={cells} />
 
