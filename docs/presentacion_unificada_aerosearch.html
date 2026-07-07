@@ -150,7 +150,6 @@
   .team { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 880px; width: 100%; }
   .tm { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 16px 14px; text-align: center; transition: border-color .3s, transform .25s; }
   .tm:hover { border-color: var(--accent); transform: translateY(-3px); }
-  /* avatar: muestra la foto si existe; si no, caen las iniciales detras */
   .tm-av {
     position: relative; width: 54px; height: 54px; border-radius: 50%;
     background: linear-gradient(135deg, rgba(255,109,0,0.12), rgba(68,138,255,0.12));
@@ -682,43 +681,41 @@
   </div>
 </section>
 
-<!-- 10. APRENDIZAJES Y CONCLUSIONES -->
+<!-- 10. APRENDIZAJES Y CONCLUSIONES (version venta) -->
 <section class="s" id="s9">
   <div class="num">10 / 11</div>
   <div class="label">APRENDIZAJES Y CONCLUSIONES</div>
   <h2>Lo que nos llevamos</h2>
-  <p class="sub">Mas que codigo: una forma distinta de laburar</p>
- 
+  <p class="sub">No solo un producto que funciona &mdash; un proceso que se puede repetir</p>
+
   <div class="two-col lean-left">
     <div>
       <div class="pill-grid" style="grid-template-columns:1fr;">
-        <div class="pill"><div class="pill-icon">&#x1F504;</div><div><h4>Scrum dejo de ser parte de la teoria</h4><p>Hacer planning, review y retro sprint a sprint, en serio, cambia como encaras el proyecto. No es lo mismo verlo en una diapositiva que vivirlo seis veces seguidas.</p></div></div>
-        <div class="pill"><div class="pill-icon">&#x1F3AF;</div><div><h4>Priorizar es decidir que NO hacer</h4><p>Elegir que atacar primero y dejar el resto anotado. Muchas veces hubo tareas que se tuvieron que pasar al siguiente sprint, por falta de practica o por subestimar cuanto iban a tardar.</p></div></div>
-        <div class="pill"><div class="pill-icon">&#x1F4CA;</div><div><h4>Los story points dan honestidad</h4><p>Ademas de dar coherencia a cuanto hace cada uno por sprint, permiten cuantificar quien esta aportando y quien no. No nos hizo falta usarlos para eso, el equipo funciono parejo, pero quedo claro que con esos numeros se detecta rapido si alguien esta trabajando o no.</p></div></div>
-        <div class="pill"><div class="pill-icon">&#x1F6E9;</div><div><h4>Hardware: aprender bajo presion</h4><p>De los seis, dos ya venian con experiencia en ESP32, pero igual hizo falta aprender bastante mas. El hardware no perdona: un cable mal puesto, una alimentacion inestable o algo mal soldado te tira abajo una tarde entera de pruebas.</p></div></div>
+        <div class="pill"><div class="pill-icon">&#x1F504;</div><div><h4>Scrum, en serio</h4><p>Planning, review y retro sprint a sprint. No es teoria: es la diferencia entre planificar y ejecutar.</p></div></div>
+        <div class="pill"><div class="pill-icon">&#x1F3AF;</div><div><h4>Priorizar es elegir que no hacer</h4><p>Aprendimos a leer el sobre-compromiso antes de que nos pase factura.</p></div></div>
+        <div class="pill"><div class="pill-icon">&#x1F4CA;</div><div><h4>Story points = honestidad</h4><p>Numeros que muestran, sprint a sprint, quien avanza y cuanto.</p></div></div>
+        <div class="pill"><div class="pill-icon">&#x1F6E9;</div><div><h4>Hardware sin dependencia</h4><p>Se quemo un dron. El sistema siguio de pie &mdash; esa es la arquitectura funcionando.</p></div></div>
       </div>
     </div>
     <div class="concl-box">
       <h3>Conclusion</h3>
-      <p>Un proyecto grande sin un plan no es posible: se sostiene por un proceso constante de esfuerzo medido, no por talento individual.</p>
-      <p>El backlog priorizado nos dio direccion, los story points nos dieron honestidad, y el hardware (y el software) nos bajo a tierra &mdash; fue un proyecto complicado, y eso se nota.</p>
-      <p>Nos llevamos un producto que funciona &mdash; y, sobre todo, <b>una forma de trabajar</b> que podemos repetir en cualquier equipo.</p>
+      <p>Un proyecto grande sin proceso no escala. Nosotros construimos el proceso primero &mdash; y el producto vino solo.</p>
+      <p>Nos llevamos un sistema que funciona, y <b>una forma de trabajar</b> lista para el proximo proyecto.</p>
     </div>
   </div>
 </section>
 
-<!-- 11. CIERRE -->
+<!-- 11. CIERRE (version venta) -->
 <section class="s" id="s10">
   <div class="num">11 / 11</div>
   <div class="cierre" style="text-align:center; max-width:800px;">
     <div class="label">CONCLUSION</div>
     <h2><span>AeroSearch AI</span></h2>
     <p class="sub" style="margin-bottom:32px;">
-      Arranco como una idea quiza un poco mas simple, y termino siendo un producto
-      que funciona de verdad para mas cosas de las que se penso en un inicio:
-      hardware, firmware, IA, backend, frontend y bases de datos.
+      Arranco como una idea y hoy es un sistema completo, integrado de punta a punta
+      &mdash; listo para escalar a un dron real, a un cliente real, a un caso de uso real.
     </p>
- 
+
     <div class="logros">
       <div>Deteccion de personas con YOLO</div>
       <div>Telemetria en tiempo real</div>
@@ -731,15 +728,15 @@
       <div>FODA convertido en backlog</div>
       <div>Deploy con Docker Compose</div>
     </div>
- 
+
     <div style="display:inline-flex; gap:30px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text3); margin-top:8px;">
       <span>Practica de Desarrollo de Software</span><span>&middot;</span><span>UNSAM</span><span>&middot;</span><span>1er Cuatrimestre 2026</span>
     </div>
- 
-    <div style="margin-top:32px; font-size:18px; color:var(--text2);">Estamos contentos con lo que armamos &mdash; Gracias!</div>
+
+    <div style="margin-top:32px; font-size:18px; color:var(--text2);">Gracias. Quedamos para las preguntas.</div>
   </div>
 </section>
- 
+
 
 <script>
   const slides = document.querySelectorAll('.s');

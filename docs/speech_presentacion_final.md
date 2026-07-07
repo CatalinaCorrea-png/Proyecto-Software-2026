@@ -43,7 +43,7 @@ _(bajar a slide 3)_
 >
 > Y esa es la lección que nos llevamos de esta práctica: aprender a leer esas señales para **planificar los siguientes sprints con tareas y metas realistas**, comprometiéndonos con lo que de verdad podíamos cumplir.
 >
-> Y acá tenemos que ser honestos con un impedimento que nos tocó sobre el final: **se nos quemó el dron**, y por tiempo y presupuesto no llegamos a rearmarlo. Pero queremos dejar algo bien claro: **el sistema no depende de ese dron en particular**. La app se comunica con el hardware a través de una capa desacoplada — telemetría y comandos por UDP —, así que puede funcionar con cualquier dron que hable ese lenguaje: una controladora tipo **Pixhawk con ArduPilot o PX4** por MAVLink, un **DJI con su SDK**, o una companion computer como una **Raspberry Pi con cámara**. Y la detección ya corre sobre cualquier fuente de video —webcam, un archivo, YouTube o el ESP32—, o sea que el motor de IA es totalmente independiente del dron físico. Se quemó *un* dron, no el sistema."
+> Y acá tenemos que ser honestos con un impedimento que nos tocó sobre el final: **se nos quemó el dron**, y por tiempo y presupuesto no llegamos a rearmarlo. Pero queremos dejar algo bien claro: **el sistema no depende de ese dron en particular**. La app se comunica con el hardware a través de una capa desacoplada — telemetría y comandos por UDP —, así que puede funcionar con cualquier dron que hable ese lenguaje: una controladora tipo **Pixhawk con ArduPilot o PX4** por MAVLink, un **DJI con su SDK**, o una companion computer como una **Raspberry Pi con cámara**. Y la detección ya corre sobre cualquier fuente de video —webcam, un archivo, YouTube o el ESP32—, o sea que el motor de IA es totalmente independiente del dron físico. Se quemó _un_ dron, no el sistema."
 
 _(bajar a slide 4)_
 
@@ -154,15 +154,15 @@ _(bajar a slide 10)_
 
 > "¿Qué nos llevamos de todo esto? La verdad, más que el código en sí, nos llevamos una forma distinta de trabajar.
 >
-> Lo de Scrum dejó de ser parte de la teoría. Hacer planning, review y retro sprint a sprint, en serio, cambia cómo encarás el proyecto — no es lo mismo verlo en una diapositiva que vivirlo seis veces seguidas.
+> Lo de Scrum dejó de ser parte solo teoria y junto con el cuatrimestre anterior que tambien lo hicimos paso a ser la realidad. Hacer planning, review y retro sprint a sprint, eso cambia cómo encarás el proyecto — no es lo mismo verlo en una diapositiva que vivirlo seis veces seguidas.
 >
 > También aprendimos a priorizar, que hace y qué **no** hacer: elegir qué atacar primero y dejar el resto anotado, muchas veces hubieron tareas que se tuvieron que pasar a el siguiente sprint (eso creo que es por falta de practica y quiza subestimar el tiempo que va a tardar en completarce una tarea).
 >
-> Algo que nos dimos cuanta tambien es que estimar con story points sirve para, ademas de poder tener una coherencia en la cantidad de tareas que uno hace por sprint, te permite **cuantificar quién está aportando y quién no**. En nuestro caso no hizo falta usarlo para eso por que nuestro equipo funcionó parejo, pero quedó claro que con esos números se puede detectar bastante rápido si alguien esta trabajando o no.
+> Algo que nos dimos cuanta tambien es que estimar con story points sirve para, ademas de poder tener una coherencia en la cantidad de tareas que uno hace por sprint, te permite **cuantificar quién está aportando y quién no**. En nuestro caso no hizo falta usarlo para eso por que nuestro equipo funcionó parejo, pero quedó claro que con esos números son algo que te sirve para que no quede en la nada la tarea de uno y te deja identificar cuanto trabajo esta haciendo cada integrante.
 >
-> Y después está lo del **hardware**. De los seis, dos ya venían con algo de experiencia con el ESP32, pero igual hizo falta aprender bastante — el hardware no perdona, un cable mal puesto o una alimentación inestable, alguna cosa mal soldada te tira abajo una tarde entera de pruebas.
+> Y después está lo del **hardware** que me parece que hay que mencionarlo. De los seis, dos ya teniamos algo de experiencia con el ESP32 y hardware en general, pero igual hizo falta aprender bastante — el hardware no perdona, un cable mal puesto o una alimentación inestable, alguna cosa mal soldada te tira abajo una tarde entera de pruebas que de hecho nos paso mas de una vez. (se retraso muchoas veces por esto)
 >
-> Si hay una conclusión de fondo es esta: un proyecto grande hacerlo sin un plan no es posible, es algo que se sostiene por proceso constante de esfuerzo medido. El backlog priorizado nos dio dirección, los story points nos dieron honestidad, y el hardware/software nos bajó a tierra ya que fue un proyecto complicado."
+> Si hay una conclusión de fondo es esta: un proyecto grande hacerlo sin un plan no es posible, es algo que se sostiene por proceso constante de esfuerzo medido con roles claros. El backlog priorizado nos dio dirección, los story points nos dieron honestidad, y el hardware/software nos bajó a tierra ya que fue un proyecto complicado."
 
 _(bajar a slide 11)_
 
@@ -170,7 +170,7 @@ _(bajar a slide 11)_
 
 ## SLIDE 11 — Cierre
 
-> "Para cerrar: basicamente nuestro proyecto AeroSearch arrancó como una idea quiza un poco mas simple y terminó siendo un producto que funciona de verdad para mas cosas que lo que se penso en un inicio con hardware, firmware, IA, back, front, ademas de bases de datos.
+> "Para cerrar: basicamente nuestro proyecto AeroSearch arrancó como una idea quiza un poco mas simple (que en realidad era complicado) y terminó siendo un producto mas complejo que funciona de verdad para mas cosas que lo que se penso en un inicio, ademas implementa de todo hardware, firmware, IA, back, front, ademas de bases de datos, osea es algo muy completo.
 >
 > Y nada, la verdad estamos contentos con lo que armamos, y nos gusta que pudimos hacer funcionar un proyecto que la verdad que nos gusta posta.
 >
