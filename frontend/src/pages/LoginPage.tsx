@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { API_URL } from '../config'
 import { useAuth } from '../contexts/AuthContext'
+import { GlobeHero } from '../components/hero/GlobeHero'
+import { WebGLStars } from '../components/hero/WebGLStars'
 
 export function LoginPage() {
   const { login, loginAsGuest } = useAuth()
@@ -35,8 +37,17 @@ export function LoginPage() {
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
+    <>
+      {/* Fondo de estrellas WebGL: fijo a pantalla completa, detrás de todo. */}
+      <WebGLStars />
+      {/* Globo: elemento libre grande, detrás del modal, corrido a la derecha
+          e inclinado. No está contenido en ninguna caja. */}
+      <div className="login-globe-bg" aria-hidden="true">
+        <GlobeHero />
+      </div>
+      {/* Modal de login centrado en la pantalla. */}
+      <div className="login-container">
+        <div className="login-card login-card--modal">
         <div className="login-brand">AeroSearch AI</div>
         <p className="login-subtitle">Sistema de Búsqueda y Rescate con Drones</p>
         <form onSubmit={handleSubmit} className="login-form">
@@ -96,7 +107,8 @@ export function LoginPage() {
         <button type="button" className="login-guest-btn" onClick={loginAsGuest}>
           Entrar como invitado
         </button>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

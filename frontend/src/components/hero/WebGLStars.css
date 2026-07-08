@@ -1,0 +1,15 @@
+/* ── Fondo de estrellas WebGL: fijo a pantalla completa, detrás de todo ─────── */
+.webgl-stars {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #080b14; /* respaldo si WebGL no está disponible */
+}
+
+.webgl-stars__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
