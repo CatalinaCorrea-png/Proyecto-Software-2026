@@ -186,6 +186,21 @@
   pointer-events: none; /* deja pasar el arrastre al globo, salvo sobre el modal */
 }
 
+/* Siglas del equipo fijadas arriba a la derecha, por encima del fondo. */
+.login-initials {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  z-index: 3; /* sobre estrellas (z0), globo (z1) y modal (z2) */
+  font-family: monospace;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #8a909a33; /* gris apagado, visible sobre el fondo casi negro (#080b14) */
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Envoltura fija a pantalla completa que recorta el sangrado del globo. */
 .login-globe-bg {
   position: fixed;

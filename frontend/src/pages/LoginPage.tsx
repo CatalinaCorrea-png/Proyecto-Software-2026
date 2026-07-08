@@ -40,6 +40,8 @@ export function LoginPage() {
     <>
       {/* Fondo de estrellas WebGL: fijo a pantalla completa, detrás de todo. */}
       <WebGLStars />
+      {/* Siglas del equipo, arriba a la derecha sobre el fondo. */}
+      <div className="login-initials" aria-hidden="true">MCDNFM</div>
       {/* Globo: elemento libre grande, detrás del modal, corrido a la derecha
           e inclinado. No está contenido en ninguna caja. */}
       <div className="login-globe-bg" aria-hidden="true">
