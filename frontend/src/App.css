@@ -48,14 +48,53 @@
   cursor: not-allowed;
 }
 
+/* Acción destructiva: agrupada a la derecha con las acciones de sesión,
+   con forma de botón (no de tab) para dejar clara su naturaleza. */
 .app-nav__btn--stop {
-  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 82, 82, 0.08);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  border-radius: 4px;
   color: #FF5252;
+  font-family: monospace;
   font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .app-nav__btn--stop:hover {
-  color: #FF8A80;
+  background: #FF5252;
+  border-color: #FF5252;
+  color: #fff;
+}
+
+/* Acción del admin para compartir el enlace de modo lectura (feature de roles) */
+.app-nav__btn--share {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 4px;
+  color: #00E5FF;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.app-nav__btn--share:hover {
+  background: #00E5FF;
+  border-color: #00E5FF;
+  color: #05080F;
 }
 
 .app-content {
@@ -78,4 +117,315 @@
 
 .app-view--hidden {
   display: none;
+}
+
+/* ── Acciones de la derecha (finalizar misión + usuario) ── */
+.app-nav__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-nav__divider {
+  width: 1px;
+  height: 20px;
+  background: #1E2D3D;
+}
+
+/* ── User info + logout in nav ── */
+.app-nav__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-nav__username {
+  font-family: monospace;
+  font-size: 12px;
+  color: #90A4AE;
+}
+
+.app-nav__role {
+  font-family: monospace;
+  font-size: 10px;
+  color: #FF6D00;
+  background: rgba(255, 109, 0, 0.1);
+  border: 1px solid rgba(255, 109, 0, 0.3);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+.app-nav__logout {
+  background: transparent;
+  border: 1px solid #37474F;
+  border-radius: 4px;
+  color: #78909C;
+  font-family: monospace;
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.app-nav__logout:hover {
+  color: #FF5252;
+  border-color: #FF5252;
+}
+
+/* ── Login page ── */
+.login-container {
+  position: relative;
+  z-index: 2; /* modal por encima del globo (z1) y del aura (z0) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: transparent; /* el aura etérea a pantalla completa se ve detrás */
+  pointer-events: none; /* deja pasar el arrastre al globo, salvo sobre el modal */
+}
+
+/* Envoltura fija a pantalla completa que recorta el sangrado del globo. */
+.login-globe-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* El globo: grande y libre (sin caja), corrido hacia la derecha —un poco fuera
+   de pantalla y un poco por detrás del modal— e inclinado hacia la derecha. */
+.login-globe-bg .globe-hero {
+  position: absolute;
+  top: 50%;
+  left: 60%;
+  right: 20%;
+  width: min(800px, 80vw);
+  height: min(800px, 80vw);
+  min-height: 0;
+  transform: translate(calc(-50% + 260px), -50%) rotate(12deg);
+  transform-origin: center;
+  pointer-events: auto; /* arrastrable en la parte visible */
+}
+.login-globe-bg .globe-hero__stage {
+  max-width: none;
+  max-height: none;
+}
+
+/* Modal de login centrado. Glass sutil para ver el globo/aura por detrás. */
+.login-card {
+  pointer-events: auto;
+  background: #0D1B2A;
+  border: 1px solid #1E3A5F;
+  border-radius: 10px;
+  padding: 36px 40px;
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-card--modal {
+  background: rgba(10, 20, 36, 0.72);
+  border: 1px solid rgba(30, 58, 95, 0.7);
+  border-radius: 14px;
+  padding: 40px;
+  backdrop-filter: blur(16px) saturate(1.1);
+  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  box-shadow: 0 26px 70px -22px rgba(0, 0, 0, 0.72);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .login-globe-bg .globe-hero {
+    right: -24%;
+    top: 40%;
+    width: min(600px, 130vw);
+    height: min(600px, 130vw);
+    opacity: 0.72;
+  }
+  .login-card--modal {
+    padding: 32px 26px;
+  }
+}
+
+.login-brand {
+  font-family: monospace;
+  font-size: 22px;
+  font-weight: bold;
+  color: #FF6D00;
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+.login-subtitle {
+  font-family: monospace;
+  font-size: 11px;
+  color: #546E7A;
+  text-align: center;
+  margin: 0 0 20px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-field label {
+  font-family: monospace;
+  font-size: 10px;
+  color: #78909C;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.login-field input {
+  background: #0A1628;
+  border: 1px solid #1E3A5F;
+  border-radius: 4px;
+  color: #E0E0E0;
+  font-family: monospace;
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.login-field input:focus {
+  border-color: #FF6D00;
+}
+
+.login-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-password-wrapper input {
+  width: 100%;
+  padding-right: 38px;
+}
+
+.login-eye {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.login-eye:hover {
+  opacity: 1;
+}
+
+.login-error {
+  font-family: monospace;
+  font-size: 12px;
+  color: #FF5252;
+  text-align: center;
+  padding: 8px;
+  background: rgba(255, 82, 82, 0.08);
+  border: 1px solid rgba(255, 82, 82, 0.2);
+  border-radius: 4px;
+}
+
+.login-btn {
+  background: #FF6D00;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 0;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 4px;
+}
+
+.login-btn:hover:not(:disabled) {
+  background: #E65100;
+}
+
+.login-btn:disabled {
+  background: #37474F;
+  cursor: wait;
+}
+
+/* ── Acceso invitado (solo lectura) ── */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 6px;
+  color: #455A64;
+  font-family: monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.login-guest-btn {
+  width: 100%;
+  background: transparent;
+  color: #90A4AE;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 10px 0;
+  font-family: monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.login-guest-btn:hover {
+  border-color: #FF6D00;
+  color: #FF6D00;
+}
+
+/* ── Access denied ── */
+.access-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: #546E7A;
+  font-family: monospace;
+}
+
+.access-denied__icon {
+  font-size: 40px;
+}
+
+.access-denied__title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #FF5252;
+}
+
+.access-denied__msg {
+  font-size: 13px;
+  color: #78909C;
 }

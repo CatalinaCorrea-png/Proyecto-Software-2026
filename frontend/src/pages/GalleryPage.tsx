@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useImageGallery } from '../hooks/useImageGallery'
+import { apiFetch } from '../api'
 import type { ImageMeta } from '../types'
 
 const C = {
@@ -133,6 +134,10 @@ function ImageCard({ image, onSelect }: { image: ImageMeta; onSelect: (img: Imag
             <span style={{display: 'flex', fontSize: 14, padding: 0, color: C.muted, paddingLeft: 4}}>MODO</span>
             <span style={{ fontSize: 12, color: C.text, paddingLeft: 4 }}>{image.view_mode.toUpperCase()}</span>
           </div>
+          <div>
+            <span style={{display: 'flex', fontSize: 14, padding: 0, color: C.muted, paddingLeft: 4}}>MISIÓN</span>
+            <span style={{ fontSize: 12, color: C.orange, paddingLeft: 4 }}>#{image.mission_id}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -141,6 +146,20 @@ function ImageCard({ image, onSelect }: { image: ImageMeta; onSelect: (img: Imag
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function ImageModal({ image, fullUrl, onClose }: { image: ImageMeta; fullUrl: string; onClose: () => void }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let objectUrl: string
+    apiFetch(fullUrl)
+      .then(r => r.blob())
+      .then(blob => {
+        objectUrl = URL.createObjectURL(blob)
+        setBlobUrl(objectUrl)
+      })
+      .catch(() => setBlobUrl(null))
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [fullUrl])
+
   return (
     <div
       style={{
@@ -177,11 +196,10 @@ function ImageModal({ image, fullUrl, onClose }: { image: ImageMeta; fullUrl: st
           <div key={i} style={{ position: 'absolute', ...s }} />
         ))}
 
-        <img
-          src={fullUrl}
-          alt="imagen completa"
-          style={{ width: '100%', borderRadius: 4, display: 'block', border: `1px solid ${C.border}` }}
-        />
+        {blobUrl
+          ? <img src={blobUrl} alt="imagen completa" style={{ width: '100%', borderRadius: 4, display: 'block', border: `1px solid ${C.border}` }} />
+          : <div style={{ width: '100%', height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', fontSize: 11, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 4 }}>CARGANDO...</div>
+        }
 
         <div style={{
           marginTop: 16,
