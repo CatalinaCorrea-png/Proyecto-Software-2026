@@ -39,16 +39,19 @@ export function CameraFeed({ onNewDetection }: Props) {
       minHeight: 0,
     }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ color: '#78909C', fontSize: 11, fontFamily: 'monospace' }}>
+      {/* Header — altura fija para que el badge de detecciones no agrande/achique la fila */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        height: 22, flexShrink: 0, marginBottom: 8,
+      }}>
+        <span style={{ color: '#78909C', fontSize: 12, fontFamily: 'monospace' }}>
           CÁMARA EN VIVO
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {framePayload && framePayload.detection_count > 0 && (
             <span style={{
               background: '#FF6D00', color: 'white',
-              fontSize: 10, padding: '2px 6px', borderRadius: 4,
+              fontSize: 8, padding: '2px 6px', borderRadius: 4,
               fontFamily: 'monospace', fontWeight: 'bold'
             }}>
               {framePayload.detection_count} DET

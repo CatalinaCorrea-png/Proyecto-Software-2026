@@ -14,7 +14,7 @@ _BACKEND_DIR = Path(__file__).resolve().parents[2]
 _V2_WEIGHTS = _BACKEND_DIR / "yolov8n_tuned_v2.pt"
 _FALLBACK_WEIGHTS = _BACKEND_DIR / "yolov8n.pt"
 
-CONFIDENCE_THRESHOLD = 0.50
+CONFIDENCE_THRESHOLD = 0.27
 
 
 def _resolve_weights() -> Path:
