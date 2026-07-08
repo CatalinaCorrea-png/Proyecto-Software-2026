@@ -33,17 +33,17 @@ _(bajar a slide 3)_
 
 ## SLIDE 03 — El equipo, roadmap y velocity
 
-> "Detrás de esto estuvimos **seis personas**: Catalina, Nicolás, Dana, Maximiliano, Fernanda y Martín. Trabajamos con **Scrum a lo largo de 6 sprints**, todos tocando backend, frontend, hardware e IA — no nos encasillamos en un solo rol.
+> "Detrás de todo esto estamos **nosotros seis**: Catalina, Nicolás, Dana, Maximiliano, Fernanda y Martín.
 >
-> En el roadmap ven cómo fue creciendo el producto: Sprint 1, infraestructura, el mapa con trakeo del dron y el server en el ESP32-CAM. Sprint 2, la detección con YOLO, la grilla y el control PID. Sprint 3, persistencia de misiones. Sprint 4, estadísticas y autenticación. Sprint 5 — el más cargado — la conexión real del dron con la app y el refactor de vuelo autónomo. Y el Sprint 6, en curso, con roles de usuario y tests end-to-end.
+> Y algo que para nosotros fue una **fortaleza real** como equipo: todos somos desarrolladores fullstack. Nos dividimos en frentes — uno de front, otro de back y otro de hardware —, pero no nos quedamos encasillados en eso. Cuando alguien se trababa, cualquiera podía saltar a darle una mano, y así evitábamos que el bloqueo de una sola persona frenara el avance de todo el equipo.
 >
-> Pero quiero detenerme en **cómo lo medimos**, porque acá la metodología ágil se ve en números. Estimamos cada tarea en **story points usando la escala de Fibonacci** — 1, 2, 3, 5, 8, 13 — justamente porque a mayor tamaño, mayor incertidumbre, y los saltos de Fibonacci reflejan eso mejor que una escala lineal.
+> Trabajamos con **Scrum a lo largo de 6 sprints**. Para estimar el esfuerzo de cada tarea usamos **story points con la escala de Fibonacci** — 1, 2, 3, 5, 8, 13 —, porque nos pareció una forma mucho más fiel que una escala lineal de reflejar lo que nos podía costar cada tarea y cada sprint: a mayor tamaño, mayor incertidumbre, y los saltos de Fibonacci capturan justamente eso.
 >
-> Con eso medimos el **velocity de cada sprint**: cuántos puntos nos comprometíamos versus cuántos completábamos. En total comprometimos **385 puntos y completamos 302 — un 78% de cumplimiento**, con un velocity promedio de unos **58 puntos por sprint** en los primeros cinco.
+> Con esos puntos medimos el **velocity de cada sprint**: cuánto nos comprometíamos versus cuánto realmente completábamos. Y esa comparación nos mostró, sprint a sprint, los momentos en los que el cumplimiento bajaba — que casi siempre coincidían con los sprints en los que nos habíamos **sobre-comprometido**.
 >
-> Y lo interesante es leer la curva con honestidad: arrancamos muy ajustados — 97% en el Sprint 1 — pero en el 2 y el 3 nos **sobre-comprometimos**: cargamos más puntos de los que el equipo podía entregar, y el cumplimiento bajó al 83-87%. Esa señal del velocity nos hizo **ajustar la planificación**: en el Sprint 4 volvimos a un alcance realista y cerramos 96%. El Sprint 6 figura en 22%, pero es simplemente porque **está en curso** — son los puntos completados hasta hoy, no un sprint fallido.
+> Y esa es la lección que nos llevamos de esta práctica: aprender a leer esas señales para **planificar los siguientes sprints con tareas y metas realistas**, comprometiéndonos con lo que de verdad podíamos cumplir.
 >
-> La lección de fondo: el velocity no es para castigarse, es un **termómetro** que nos enseñó a comprometernos con lo que de verdad podíamos cumplir."
+> Y acá tenemos que ser honestos con un impedimento que nos tocó sobre el final: **se nos quemó el dron**, y por tiempo y presupuesto no llegamos a rearmarlo. Pero queremos dejar algo bien claro: **el sistema no depende de ese dron en particular**. La app se comunica con el hardware a través de una capa desacoplada — telemetría y comandos por UDP —, así que puede funcionar con cualquier dron que hable ese lenguaje: una controladora tipo **Pixhawk con ArduPilot o PX4** por MAVLink, un **DJI con su SDK**, o una companion computer como una **Raspberry Pi con cámara**. Y la detección ya corre sobre cualquier fuente de video —webcam, un archivo, YouTube o el ESP32—, o sea que el motor de IA es totalmente independiente del dron físico. Se quemó _un_ dron, no el sistema."
 
 _(bajar a slide 4)_
 
@@ -154,15 +154,15 @@ _(bajar a slide 10)_
 
 > "¿Qué nos llevamos de todo esto? La verdad, más que el código en sí, nos llevamos una forma distinta de trabajar.
 >
-> Lo de Scrum dejó de ser parte de la teoría. Hacer planning, review y retro sprint a sprint, en serio, cambia cómo encarás el proyecto — no es lo mismo verlo en una diapositiva que vivirlo seis veces seguidas.
+> Lo de Scrum dejó de ser parte solo teoria y junto con el cuatrimestre anterior que tambien lo hicimos paso a ser la realidad. Hacer planning, review y retro sprint a sprint, eso cambia cómo encarás el proyecto — no es lo mismo verlo en una diapositiva que vivirlo seis veces seguidas.
 >
 > También aprendimos a priorizar, que hace y qué **no** hacer: elegir qué atacar primero y dejar el resto anotado, muchas veces hubieron tareas que se tuvieron que pasar a el siguiente sprint (eso creo que es por falta de practica y quiza subestimar el tiempo que va a tardar en completarce una tarea).
 >
-> Algo que nos dimos cuanta tambien es que estimar con story points sirve para, ademas de poder tener una coherencia en la cantidad de tareas que uno hace por sprint, te permite **cuantificar quién está aportando y quién no**. En nuestro caso no hizo falta usarlo para eso por que nuestro equipo funcionó parejo, pero quedó claro que con esos números se puede detectar bastante rápido si alguien esta trabajando o no.
+> Algo que nos dimos cuanta tambien es que estimar con story points sirve para, ademas de poder tener una coherencia en la cantidad de tareas que uno hace por sprint, te permite **cuantificar quién está aportando y quién no**. En nuestro caso no hizo falta usarlo para eso por que nuestro equipo funcionó parejo, pero quedó claro que con esos números son algo que te sirve para que no quede en la nada la tarea de uno y te deja identificar cuanto trabajo esta haciendo cada integrante.
 >
-> Y después está lo del **hardware**. De los seis, dos ya venían con algo de experiencia con el ESP32, pero igual hizo falta aprender bastante — el hardware no perdona, un cable mal puesto o una alimentación inestable, alguna cosa mal soldada te tira abajo una tarde entera de pruebas.
+> Y después está lo del **hardware** que me parece que hay que mencionarlo. De los seis, dos ya teniamos algo de experiencia con el ESP32 y hardware en general, pero igual hizo falta aprender bastante — el hardware no perdona, un cable mal puesto o una alimentación inestable, alguna cosa mal soldada te tira abajo una tarde entera de pruebas que de hecho nos paso mas de una vez. (se retraso muchoas veces por esto)
 >
-> Si hay una conclusión de fondo es esta: un proyecto grande hacerlo sin un plan no es posible, es algo que se sostiene por proceso constante de esfuerzo medido. El backlog priorizado nos dio dirección, los story points nos dieron honestidad, y el hardware/software nos bajó a tierra ya que fue un proyecto complicado."
+> Si hay una conclusión de fondo es esta: un proyecto grande hacerlo sin un plan no es posible, es algo que se sostiene por proceso constante de esfuerzo medido con roles claros. El backlog priorizado nos dio dirección, los story points nos dieron honestidad, y el hardware/software nos bajó a tierra ya que fue un proyecto complicado."
 
 _(bajar a slide 11)_
 
@@ -170,7 +170,7 @@ _(bajar a slide 11)_
 
 ## SLIDE 11 — Cierre
 
-> "Para cerrar: basicamente nuestro proyecto AeroSearch arrancó como una idea quiza un poco mas simple y terminó siendo un producto que funciona de verdad para mas cosas que lo que se penso en un inicio con hardware, firmware, IA, back, front, ademas de bases de datos.
+> "Para cerrar: basicamente nuestro proyecto AeroSearch arrancó como una idea quiza un poco mas simple (que en realidad era complicado) y terminó siendo un producto mas complejo que funciona de verdad para mas cosas que lo que se penso en un inicio, ademas implementa de todo hardware, firmware, IA, back, front, ademas de bases de datos, osea es algo muy completo.
 >
 > Y nada, la verdad estamos contentos con lo que armamos, y nos gusta que pudimos hacer funcionar un proyecto que la verdad que nos gusta posta.
 >
@@ -181,7 +181,7 @@ _(bajar a slide 11)_
 ## Notas para la exposición
 
 - **Ritmo:** las slides 3 (velocity), 4 y 5 son las más densas; las 7 y 8 (FODA) son el corazón de la parte de proceso. Si vas corto de tiempo, en la 3 quedate con la idea del velocity y el 78% de cumplimiento, en la 5 nombrá 3 features, y en la 7 leé solo un par de puntos por cuadrante (el resto está en pantalla).
-- **Slide 3 (velocity):** el gráfico muestra cada barra como _comprometido_ (track) con la parte llena = _completado_. Es buen momento para conectar con la historia ágil: sobre-compromiso en S2-S3 → ajuste en S4. El número clave para decir en voz alta es **385 comprometidos / 302 completados = 78%**.
+- **Slide 3 (velocity):** el gráfico muestra cada barra como _comprometido_ (track) con la parte llena = _completado_. Es buen momento para conectar con la historia ágil: sobre-compromiso en S3 y S5 → los sprints donde más bajó el cumplimiento. El número clave (opcional) para decir en voz alta es **385 comprometidos / 335 completados = 87%**. Cerrá el bloque con el impedimento del dron quemado y la independencia del hardware (Pixhawk/MAVLink, DJI, Raspberry Pi).
 - **Reparto sugerido (6 personas):** 1–2 quien abre · 3 equipo · 4–5 parte técnica · 6 flujo/demo · 7–8 FODA y testing · 9 monetización · 10 aprendizajes · 11 cierre. Si hay demo en vivo, encajala después de la slide 6.
 - **Slide 9 (monetización):** es liviana y a futuro — no te enredes en números ni precios. El concepto fuerte para dejar picando es el **mercado dual**: rescate (impacto social) + agro/eventos/seguridad (comercial).
 - **Fotos del equipo:** poné las imágenes en `docs/team/` con los nombres indicados; si falta alguna, caen las iniciales automáticamente.
